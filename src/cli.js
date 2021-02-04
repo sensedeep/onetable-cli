@@ -85,7 +85,11 @@ class App {
         this.config = config
         this.profile = config.profile
         this.migrate = new Migrate(config)
-        await this.migrate.init()
+        try {
+            await this.migrate.init()
+        } catch (err) {
+            error(`Cannot access database`, {config})
+        }
         this.migrations = await this.migrate.findMigrations()
     }
 

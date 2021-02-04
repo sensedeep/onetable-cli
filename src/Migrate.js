@@ -65,8 +65,8 @@ export default class Migrate {
             params.crypto = {primary: onetable.crypto}
         }
         let endpoint = this.endpoint || onetable.endpoint || process.env.DB_ENDPOINT
-        let client = endpoint ? { region: 'localhost', endpoint } : onetable.aws
-        this.log.info(`Configure DynamoDB access`, {client})
+        let client = this.client = endpoint ? { region: 'localhost', endpoint } : onetable.aws
+        this.log.trace(`Configure DynamoDB access`, {client})
         params.client = new AWS.DynamoDB.DocumentClient(client)
 
         this.log.trace(`Configure OneTable`, {params})
@@ -76,7 +76,7 @@ export default class Migrate {
     }
 
     async update() {
-        this.migrations = await this.Migration.scan({}, {throw: false})
+        this.migrations = await this.Migration.scan()
         this.sortMigrations(this.migrations)
     }
 
