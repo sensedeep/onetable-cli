@@ -1,0 +1,28 @@
+{
+    "name": "js-combine",
+    "description": "Useful node combine objects",
+    "version": "1.0.0",
+    "type": "module",
+    "keywords": [
+        "node",
+        "combine"
+    ],
+    "author": {
+        "name": "Michael O'Brien",
+        "email": "mob@emobrien.com"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/sensedeep/js-combine.git"
+    },
+    "bugs": {
+        "url": "http://github.com/sensedeep/js-combine/issues"
+    },
+    "licenses": [
+        {
+            "type": "MIT",
+            "url": "https://opensource.org/licenses/MIT"
+        }
+    ],
+    "origin": "sensedeep/js-combine"
+}

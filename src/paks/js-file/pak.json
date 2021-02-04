@@ -1,0 +1,23 @@
+{
+    "name": "js-file",
+    "description": "Async file handling",
+    "version": "1.0.0",
+    "type": "module",
+    "keywords": [
+        "node",
+        "file"
+    ],
+    "author": {
+        "name": "Michael O'Brien",
+        "email": "mob@emobrien.com"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/sensedeep/js-file.git"
+    },
+    "bugs": {
+        "url": "http://github.com/sensedeep/js-file/issues"
+    },
+    "license": "MIT",
+    "origin": "sensedeep/js-file"
+}

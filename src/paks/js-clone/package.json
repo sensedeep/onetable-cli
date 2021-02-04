@@ -1,0 +1,29 @@
+{
+    "name": "js-clone",
+    "description": "Useful node clone",
+    "version": "1.0.0",
+    "type": "module",
+    "keywords": [
+        "node",
+        "clone"
+    ],
+    "author": {
+        "name": "Michael O'Brien",
+        "email": "mob@emobrien.com"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/sensedeep/js-clone.git"
+    },
+    "bugs": {
+        "url": "http://github.com/sensedeep/js-clone/issues"
+    },
+    "licenses": [
+        {
+            "type": "MIT",
+            "url": "https://opensource.org/licenses/MIT"
+        }
+    ],
+    "main": "index.js",
+    "origin": "sensedeep/js-clone"
+}

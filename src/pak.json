@@ -1,0 +1,17 @@
+{
+    "name": "src",
+    "title": "Src Application",
+    "owner": "default",
+    "version": "1.0.0",
+    "import": true,
+    "profile": "dev",
+    "dependencies": {
+        "js-blend": "~1.0",
+        "js-clone": "~1.0",
+        "js-combine": "~1.0",
+        "js-dates": "~1.0",
+        "js-file": "~1.0",
+        "js-json": "~1.0",
+        "js-log": "~1.0"
+    }
+}

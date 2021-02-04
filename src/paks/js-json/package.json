@@ -1,0 +1,29 @@
+{
+    "name": "js-json",
+    "description": "Encoding for json",
+    "version": "1.0.0",
+    "type": "module",
+    "keywords": [
+        "node",
+        "json"
+    ],
+    "author": {
+        "name": "Michael O'Brien",
+        "email": "mob@emobrien.com"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/sensedeep/js-json.git"
+    },
+    "bugs": {
+        "url": "http://github.com/sensedeep/js-json/issues"
+    },
+    "licenses": [
+        {
+            "type": "MIT",
+            "url": "https://opensource.org/licenses/MIT"
+        }
+    ],
+    "main": "index.js",
+    "origin": "sensedeep/js-json"
+}
