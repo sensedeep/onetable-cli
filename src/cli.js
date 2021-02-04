@@ -7,7 +7,7 @@
         migrate all, reset, down, up, 1.2.3
 
     Reads migrate.json:
-        dynamodb: {
+        onetable: {
             crypto: {
                 "cipher": "aes-256-gcm",
                 "password": "1f2e2-d27f9-aa3a2-3f7bc-3a716-fc73e"
@@ -73,10 +73,11 @@ class App {
     }
 
     constructor() {
+        this.verbose = 0
         this.dry = ''
         this.bump = 'patch'
+        this.aws = {}
         this.args = this.parseArgs()
-        this.verbose = 0
     }
 
     async init() {
@@ -112,7 +113,7 @@ class App {
         let versions = this.migrate.getOutstandingVersions()
         let version = versions.length ? versions.pop() : this.migrate.getCurrentVersion()
         version = Semver.inc(version, this.bump)
-        let dir = Path.resolve(this.config.dynamodb.migrations || './migrations')
+        let dir = Path.resolve(this.config.onetable.migrations || '.')
         let path = `${dir}/${version}.js`
         if (Fs.existsSync(path)) {
             error(`Migration ${path} already exists`)
@@ -213,6 +214,9 @@ class App {
                 let migration = await this.migrate.apply(direction, version)
                 print(`${verb} "${migration.version} - ${migration.description}"`)
             }
+            await this.migrate.update()
+            current = await this.migrate.getCurrentVersion()
+            print(`\nCurrent database version: ${current}`)
         } catch (err) {
             error('Migration failed', err.message, err.details)
         }
@@ -267,7 +271,13 @@ class App {
         let i
         for (i = 2; i < argv.length; i++) {
             let arg = argv[i]
-            if (arg == '--bump' || arg == '-b') {
+            if (arg == '--aws-access-key') {
+                this.aws.accessKeyId = argv[++i]
+            } else if (arg == '--aws-secret-key') {
+                this.aws.secretAccessKey = argv[++i]
+            } else if (arg == '--aws-region') {
+                this.aws.region = argv[++i]
+            } else if (arg == '--bump' || arg == '-b') {
                 this.bump = argv[++i]
             } else if (arg == '--dir' || arg == '-d') {
                 process.chdir(argv[++i])
@@ -312,6 +322,7 @@ class App {
             config.profile = profile
         }
         config.verbose = this.verbose || config.verbose
+        config.aws = this.aws
         return config
     }
 
