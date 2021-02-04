@@ -1,8 +1,8 @@
 {
-    "name": "onetable-migrate",
-    "version": "0.6.7",
+    "name": "onetable-cli",
+    "version": "0.1.0",
     "type": "module",
-    "description": "DynamoDB OneTable Migrate",
+    "description": "DynamoDB OneTable Migration CLI",
     "keywords": [
         "dynamodb",
         "onetable",
@@ -24,12 +24,12 @@
     },
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/sensedeep/onetable-migrate.git"
+        "url": "git+https://github.com/sensedeep/onetable-cli.git"
     },
     "bugs": {
-        "url": "https://github.com/sensedeep/onetable-migrate/issues"
+        "url": "https://github.com/sensedeep/onetable-cli/issues"
     },
-    "homepage": "https://github.com/sensedeep/onetable-migrate",
+    "homepage": "https://github.com/sensedeep/onetable-cli",
     "devDependencies": {
         "@types/jest": "^26.0.19",
         "@types/node": "^14.14.16",

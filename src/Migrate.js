@@ -33,19 +33,19 @@ export default class Migrate {
         this.config = config
         this.log = new Log(config.log, {app: 'migrate', source: 'migrate'})
         if (config.verbose) {
-            this.log.setLevels({dynamodb: config.verbose})
+            this.log.setLevels({migrate: config.verbose + 4})
         }
-        this.dir = Path.resolve(config.dynamodb.migrations || './migrations')
+        this.dir = Path.resolve(config.onetable.migrations || './migrations')
         this.log.trace(`Using migrations from "${this.dir}"`)
 
-        if (!config.dynamodb) {
+        if (!config.onetable) {
             error('Missing database configuration')
         }
     }
 
     async init() {
-        let dbc = this.config.dynamodb
-        let path = Path.resolve(process.cwd(), this.schema || this.config.dynamodb.schema || './schema.json')
+        let onetable = this.config.onetable
+        let path = Path.resolve(process.cwd(), this.schema || this.config.onetable.schema || './schema.json')
         if (!Fs.existsSync(path)) {
             error(`Cannot find schema definition in "${path}"`)
         }
@@ -53,23 +53,29 @@ export default class Migrate {
         let schema = (await import(path)).default
 
         let params = {
-            delimiter: dbc.delimiter || '#',
-            hidden: dbc.hidden || true,
-            logger: this.log.child({source: 'dynamodb'}),
-            name: dbc.name,
-            nulls: dbc.nulls,
+            delimiter: onetable.delimiter || '#',
+            hidden: onetable.hidden || true,
+            logger: this.log.child({source: 'onetable'}),
+            name: onetable.name,
+            nulls: onetable.nulls,
             schema,
-            typeField: dbc.type || 'type',
+            typeField: onetable.type || 'type',
         }
-        if (dbc.crypto) {
-            params.crypto = {primary: dbc.crypto}
+        if (onetable.crypto) {
+            params.crypto = {primary: onetable.crypto}
         }
-        let endpoint = this.endpoint || dbc.endpoint || process.env.DB_ENDPOINT
-        let doc = endpoint ? { region: 'localhost', endpoint } : {}
-        params.client = new AWS.DynamoDB.DocumentClient(doc)
+        let endpoint = this.endpoint || onetable.endpoint || process.env.DB_ENDPOINT
+        let client = endpoint ? { region: 'localhost', endpoint } : onetable.aws
+        this.log.info(`Configure DynamoDB access`, {client})
+        params.client = new AWS.DynamoDB.DocumentClient(client)
 
+        this.log.trace(`Configure OneTable`, {params})
         this.db = new Table(params)
         this.Migration = new Model(this.db, '_Migration', { fields: MigrationFields }, {timestamps: false})
+        await this.update()
+    }
+
+    async update() {
         this.migrations = await this.Migration.scan({}, {throw: false})
         this.sortMigrations(this.migrations)
     }
