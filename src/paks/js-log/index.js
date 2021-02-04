@@ -1,8 +1,6 @@
 /*
     log.js - Simple, fast logging
 
-    TODO: would be good to have a wrapper for ExpressJS functions that generated a correlation-id and included HTTP headers etc.
-
     import Log from 'js-log'
 
     let log = new Log(options, context)
@@ -100,12 +98,6 @@ export default class Log {
         log.filters = null
         log.loggers = this.loggers.slice(0)
         log.types = this.types
-        /*
-        if (config) {
-            log.setFilters({filters: config.filters || this.filters, types: config.types || this.types})
-        } else {
-            log.setFilters({filters: this.filters, types: this.types})
-        } */
         log.parent = this
         return log
     }
@@ -139,7 +131,9 @@ export default class Log {
         if (!this.filters) {
             this.filters = Object.clone(DefaultFilters)
         }
-        this.filters[0].levels = levels
+        for (let [key,value] of Object.entries(levels)) {
+            this.filters[0].levels[key] = value
+        }
     }
 
     addContext(context) {
@@ -182,7 +176,6 @@ export default class Log {
         context.level = context.level != null ? context.level : (this.types[type] || 0)
         if (context.at === true) {
             try {
-                // context.at = (new Error('stack')).stack.split('\n')[3].trim().replace(/^at trace..|:[0-9]*\)$/g, '')
                 context.at = (new Error('stack')).stack.split('\n')[3].trim().replace(/^.*webpack:\/|:[0-9]*\)$/g, '')
             } catch(err) {}
         }
@@ -215,11 +208,9 @@ export default class Log {
             context.message = JSON.stringify(message)
         }
         if (context.exception) {
-            //  MOB - why?
             let err = context.exception
             let exception = context.exception = Object.assign({}, err)
             if (err.stack) {
-                // exception.stack = err.stack.split('\n').map(s => s.trim())
                 exception.stack = err.stack
             }
             exception.message = err.message
@@ -235,9 +226,6 @@ export default class Log {
         params.context = Object.assign({}, this.context, context)
     }
 
-    /*
-        Filter is called by Loggers
-     */
     applyFilters(params) {
         let {context} = params
         let level
@@ -348,7 +336,6 @@ class ConsoleLogger {
 
                 } else {
                     console.log(`${time}: ${module}: ${type}: ${message}`)
-                    // console.log(JSON.stringify(context, null, 4) + '\n')
                 }
             } catch (err) {
                 console.log(`Exception in emitting log message: ${message}`)
@@ -358,6 +345,12 @@ class ConsoleLogger {
 
     getTime() {
         let now = new Date()
-        return `${zpad(now.getHours(), 2)}:${zpad(now.getMinutes(), 2)}:${zpad(now.getSeconds(), 2)}`
+        return `${this.zpad(now.getHours(), 2)}:${this.zpad(now.getMinutes(), 2)}:${this.zpad(now.getSeconds(), 2)}`
+    }
+
+    zpad(n, size) {
+        let s = n + ''
+        while (s.length < size) s = '0' + s
+        return s
     }
 }
