@@ -5,6 +5,7 @@
     Usage:
         migrate list, status, outstanding
         migrate all, reset, down, up, 1.2.3
+        migrate generate
 
     Reads migrate.json:
         onetable: {
@@ -24,13 +25,16 @@
 
 import Fs from 'fs'
 import Path from 'path'
-import Blend from 'js-blend'
-import File from 'js-file'
-import Dates from 'js-dates'
 import Readline from 'readline'
 import Semver from 'semver'
+import AWS from 'aws-sdk'
+import Migrate from 'onetable-migrate'
+import {Table} from 'dynamodb-onetable'
 
-import Migrate from './Migrate.js'
+import Blend from 'js-blend'
+import Dates from 'js-dates'
+import File from 'js-file'
+import Log from 'js-log'
 
 const MigrationTemplate = `
 export default {
@@ -47,6 +51,7 @@ const Usage = `
 migrate usage:
 
   migrate 1.2.3                         # Apply migrations up or down to version 1.2.3
+  migrate all                           # Apply all outstanding migrations (upwards)
   migrate down                          # Rervert the last applied migration
   migrate generate                      # Generate a migration stub for the next patch version
   migrate list                          # List all applied migrations
@@ -82,17 +87,48 @@ class App {
 
     async init() {
         let config = await this.getConfig()
+        if (!config.onetable) {
+            error('Missing database configuration')
+        }
         this.config = config
-        this.profile = config.profile
-        this.migrate = new Migrate(config)
+
+        this.log = new Log(config.log, {app: 'migrate', source: 'migrate'})
+        if (this.verbose) {
+            this.log.setLevels({migrate: this.verbose + 4})
+        }
+
+        let one = config.onetable
+        let endpoint = this.endpoint || one.endpoint || process.env.DB_ENDPOINT
+        let args = this.client = endpoint ? { region: 'localhost', endpoint } : one.aws
+        this.log.trace(`Configure DynamoDB access`, {args})
+
+        let params = Object.assign({}, one, {
+            client: new AWS.DynamoDB.DocumentClient(args),
+            schema: await this.readSchema(config),
+        })
+        if (params.crypto) {
+            params.crypto = {primary: params.crypto}
+        }
+        let onetable = new Table(params)
+        this.migrate = new Migrate(onetable)
+
         try {
             await this.migrate.init()
         } catch (err) {
-            error(`Cannot access database`, {config})
+            error(`Cannot access database`, {params})
         }
-        this.migrations = await this.migrate.findMigrations()
+        this.pastMigrations = await this.migrate.findPastMigrations()
     }
 
+    async readSchema(config) {
+        let path = Path.resolve(process.cwd(), this.schema || config.onetable.schema || './schema.json')
+        if (!Fs.existsSync(path)) {
+            error(`Cannot find schema definition in "${path}"`)
+        }
+        this.log.trace(`Importing schema from "${path}"`)
+        return (await import(path)).default
+
+    }
     async command() {
         let args = this.args
         let cmd = args[0]
@@ -131,12 +167,12 @@ class App {
     }
 
     list() {
-        if (this.migrations.length == 0) {
+        if (this.pastMigrations.length == 0) {
             print('\nNo migrations applied')
         } else {
             print('\nDate                  Version   Description')
         }
-        for (let m of this.migrations) {
+        for (let m of this.pastMigrations) {
             let date = Dates.format(m.time, 'HH:MM:ss mmm d, yyyy')
             print(`${date}  ${m.version}     ${m.description}`)
         }
@@ -170,7 +206,7 @@ class App {
 
         if (target == 'latest') {
             direction = 0
-            this.migrations = []
+            this.pastMigrations = []
             versions = [RESET_VERSION]
 
         } else if (target == 'up') {
@@ -183,17 +219,17 @@ class App {
 
         } else if (target == 'down') {
             direction = -1
-            let version = this.migrations.slice(0).reverse().map(m => m.version).shift()
+            let version = this.pastMigrations.slice(0).reverse().map(m => m.version).shift()
             if (version) {
                 versions = [version]
             }
 
         } else if (Semver.compare(target, current) < 0) {
             direction = -1
-            if (target != '0.0.0' && !this.migrations.find(m => m.version == target)) {
+            if (target != '0.0.0' && !this.pastMigrations.find(m => m.version == target)) {
                 error(`Cannot find target migration ${target} in applied migrations`)
             }
-            versions = this.migrations.reverse().map(m => m.version).filter(v => Semver.compare(v, target) > 0)
+            versions = this.pastMigrations.reverse().map(m => m.version).filter(v => Semver.compare(v, target) > 0)
 
         } else {
             direction = 1
@@ -310,9 +346,12 @@ class App {
 
     async getConfig() {
         let config = {}
+        //  MOB - should have option to provide path to migrate.json
         for (let path of ['package.json', 'migrate.json', 'schema.json']) {
             if (Fs.existsSync(path)) {
                 config = Blend(config, await File.readJson(path))
+            } else if (path == 'migrate.json') {
+                error(`Cannot locate ${path}`)
             }
         }
         let index, profile
@@ -325,14 +364,15 @@ class App {
             delete config.profiles
             config.profile = profile
         }
-        config.verbose = this.verbose || config.verbose
         config.aws = this.aws
+        this.profile = config.profile
         return config
     }
 
+    /*
     async readJson(path) {
         return await File.readJson(path)
-    }
+    } */
 
     trace(...args) {
         if (this.verbose) {

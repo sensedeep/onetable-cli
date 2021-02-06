@@ -11,7 +11,6 @@
         "js-combine": "~1.0",
         "js-dates": "~1.0",
         "js-file": "~1.0",
-        "js-json": "~1.0",
         "js-log": "~1.0"
     }
 }

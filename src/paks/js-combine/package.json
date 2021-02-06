@@ -19,7 +19,7 @@
         "url": "http://github.com/sensedeep/js-combine/issues"
     },
     "dependencies": {
-        "js-clone": "../js-clone"
+        "js-clone": "*"
     },
     "licenses": [
         {
