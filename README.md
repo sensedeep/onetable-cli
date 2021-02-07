@@ -1,7 +1,7 @@
 # OneTable Migrate CLI
 
-[![npm](https://img.shields.io/npm/v/onetable-migrate-cli.svg)](https://www.npmjs.com/package/onetable-migrate-cli)
-[![npm](https://img.shields.io/npm/l/onetable-migrate-cli.svg)](https://www.npmjs.com/package/onetable-migrate-cli)
+[![npm](https://img.shields.io/npm/v/onetable-cli.svg)](https://www.npmjs.com/package/onetable-cli)
+[![npm](https://img.shields.io/npm/l/onetable-cli.svg)](https://www.npmjs.com/package/onetable-cli)
 
 ![OneTable](https://www.sensedeep.com/images/ring.png)
 
