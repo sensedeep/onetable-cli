@@ -7,6 +7,10 @@
 
 Theh DynamoDB OneTable Migration CLI is a command line tool for orchestrating DynamoDB migrations when using [DynamoDB OneTable](https://www.npmjs.com/package/dynamodb-onetable) and [OneTable Migrate](https://www.npmjs.com/package/onetable-migrate).
 
+The CLI is ideal for development teams to initialize and reset database contents and for production use to control and sequence step-wise database upgrades.
+
+The OneTable CLI was used in production by the [SenseDeep Serverless Troubleshooter](https://www.sensedeep.com/) for all DynamoDB access for a year before it was published as an NPM module.
+
 ## OneTable Migrate CLI Features
 
 * Simple command line utility to control and manage DynamoDB schema and contents.
@@ -38,11 +42,9 @@ Then create a `migrate.json` with your DynamoDB OneTable configuration. We use J
 
 ```javascript
 {
-    onetable: {
-        name: 'your-dynamo-table',
-        schema: 'schema.js',
-        dir: '.'
-    }
+    name: 'your-dynamo-table',
+    schema: 'schema.js',
+    dir: '.'
 }
 ```
 
@@ -140,6 +142,7 @@ migrate --dry up
 ### Command Line Options
 
 ```
+--config ./migrate.json             # Migration configuration
 --dir directory                     # Change to directory to execute
 --endpoint http://host:port         # Database endpoint
 --profile prod|stage|...            # Select configuration profile
@@ -165,12 +168,10 @@ migrate --aws-access-key key --aws-secret-key secret --aws-region us-east-1
 Via migrate.json
 ```
 {
-    onetable: {
-        aws: {
-            accessKeyId: 'your-key',
-            secretAccessKey: 'your-access',
-            region: 'us-east-1'
-        }
+    aws: {
+        accessKeyId: 'your-key',
+        secretAccessKey: 'your-access',
+        region: 'us-east-1'
     }
 }
 ```
