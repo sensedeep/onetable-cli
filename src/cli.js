@@ -8,19 +8,17 @@
         migrate generate
 
     Reads migrate.json:
-        onetable: {
-            crypto: {
-                "cipher": "aes-256-gcm",
-                "password": "1f2e2-d27f9-aa3a2-3f7bc-3a716-fc73e"
-            },
-            delimiter: ':',
-            dir: './migrations-directory',
-            hidden: true,
-            null: false,
-            schema: 'path/to/schema.js',
-            typeField: 'type',
-            name: 'sensedeep-dev',
+        crypto: {
+            "cipher": "aes-256-gcm",
+            "password": "1f2e2-d27f9-aa3a2-3f7bc-3a716-fc73e"
         },
+        delimiter: ':',
+        dir: './migrations-directory',
+        hidden: true,
+        null: false,
+        schema: 'path/to/schema.js',
+        typeField: 'type',
+        name: 'sensedeep-dev',
  */
 
 import Fs from 'fs'
@@ -97,20 +95,19 @@ class App {
             this.log.setLevels({migrate: this.verbose + 4})
         }
 
-        let one = config.onetable
-        let endpoint = this.endpoint || one.endpoint || process.env.DB_ENDPOINT
-        let args = this.client = endpoint ? { region: 'localhost', endpoint } : one.aws
-        this.log.trace(`Configure DynamoDB access`, {args})
+        let params = config.onetable
+        let endpoint = this.endpoint || params.endpoint || process.env.DB_ENDPOINT
+        let args = this.client = endpoint ? { region: 'localhost', endpoint } : params.aws
+        this.trace(`Configure DynamoDB access`, {args})
 
-        let params = Object.assign({}, one, {
-            client: new AWS.DynamoDB.DocumentClient(args),
-            schema: await this.readSchema(config),
-        })
+        params.client = new AWS.DynamoDB.DocumentClient(args)
+        params.schema = await this.readSchema(config)
+
         if (params.crypto) {
             params.crypto = {primary: params.crypto}
         }
         let onetable = new Table(params)
-        this.migrate = new Migrate(onetable)
+        this.migrate = new Migrate(onetable, config)
 
         try {
             await this.migrate.init()
@@ -346,33 +343,43 @@ class App {
 
     async getConfig() {
         let config = {}
-        //  MOB - should have option to provide path to migrate.json
-        for (let path of ['package.json', 'migrate.json', 'schema.json']) {
-            if (Fs.existsSync(path)) {
-                config = Blend(config, await File.readJson(path))
-            } else if (path == 'migrate.json') {
-                error(`Cannot locate ${path}`)
-            }
+        if (Fs.existsSync('package.json')) {
+            config = await File.readJson('package.json')
         }
+
+        let migrate = this.migrateConfig || 'migrate.json'
+        if (!Fs.existsSync(migrate)) {
+            error(`Cannot locate ${migrate}`)
+        }
+        let data = await File.readJson(migrate)
+
         let index, profile
         if ((index = process.argv.indexOf('--profile')) >= 0) {
             profile = process.argv[index + 1]
         }
-        profile = profile || config.profile || process.env.PROFILE || 'dev'
-        if (profile) {
+        profile = profile || config.profile || data.profile || process.env.PROFILE || 'dev'
+        this.trace(`Using profile ${profile}`)
+
+        if (profile && data.profiles) {
+            Blend(data, data.profiles[profile])
+            delete data.profiles
+        }
+        if (!data.onetable) {
+            data = {onetable: data}
+        }
+        config = Blend(config, data)
+
+        if (profile && config.profiles) {
             Blend(config, config.profiles[profile])
             delete config.profiles
+        }
+        if (profile) {
             config.profile = profile
         }
-        config.aws = this.aws
+        config.onetable.aws = config.onetable.aws || this.aws
         this.profile = config.profile
         return config
     }
-
-    /*
-    async readJson(path) {
-        return await File.readJson(path)
-    } */
 
     trace(...args) {
         if (this.verbose) {
