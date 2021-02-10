@@ -1,6 +1,6 @@
 {
     "name": "onetable-cli",
-    "version": "0.1.3",
+    "version": "0.1.4",
     "type": "module",
     "description": "DynamoDB OneTable Migration CLI",
     "keywords": [
@@ -41,7 +41,7 @@
         "typescript": "^4.1.3"
     },
     "dependencies": {
-        "dynamodb-onetable": "*",
+        "dynamodb-onetable": "^0.6.8",
         "js-blend": "./src/paks/js-blend",
         "js-clone": "./src/paks/js-clone",
         "js-combine": "./src/paks/js-combine",
@@ -49,7 +49,7 @@
         "js-file": "./src/paks/js-file",
         "js-log": "./src/paks/js-log",
         "json5": "^2.2.0",
-        "onetable-migrate": "*",
+        "onetable-migrate": "^0.1.2",
         "readline": "^1.3.0"
     },
     "files": [

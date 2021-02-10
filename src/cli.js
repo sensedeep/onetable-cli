@@ -123,9 +123,13 @@ class App {
         if (!Fs.existsSync(path)) {
             error(`Cannot find schema definition in "${path}"`)
         }
-        this.log.trace(`Importing schema from "${path}"`)
-        return (await import(path)).default
-
+        this.trace(`Importing schema from "${path}"`)
+        try {
+            let schema = (await import(path)).default
+            return schema
+        } catch (err) {
+            error(`Cannot load schema ${path}`, err)
+        }
     }
     async command() {
         let args = this.args
