@@ -63,6 +63,7 @@ migrate usage:
     --dir directory                     # Change to directory to execute
     --force                             # Force action without confirmation
     --endpoint http://host:port         # Database endpoint
+    --config migrate.js                 # Migration configuration file
     --profile prod|stage|...            # Select configuration profile
     --schema schema.js                  # Database schema module
     --verbose
@@ -316,6 +317,8 @@ class App {
                 this.aws.region = argv[++i]
             } else if (arg == '--bump' || arg == '-b') {
                 this.bump = argv[++i]
+            } else if (arg == '--config' || arg == '-c') {
+                this.migrateConfig = argv[++i]
             } else if (arg == '--dir' || arg == '-d') {
                 process.chdir(argv[++i])
             } else if (arg == '--dry') {
