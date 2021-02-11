@@ -102,8 +102,8 @@ class App {
         let params = config.onetable
         let endpoint = this.endpoint || params.endpoint || process.env.DB_ENDPOINT
         let args = this.client = endpoint ? { region: 'localhost', endpoint } : params.aws
-        this.trace(`Configure DynamoDB access`, {args})
 
+        this.trace(`Accessing dynamodb`, {args})
         params.client = new AWS.DynamoDB.DocumentClient(args)
         params.schema = await this.readSchema(config)
 
@@ -338,8 +338,6 @@ class App {
                 this.usage()
             } else if (arg == '--profile') {
                 this.profile = argv[++i]
-            } else if (arg == '--region') {
-                this.aws.region = argv[++i]
             } else if (arg == '--schema' || arg == '-s') {
                 this.schema = argv[++i]
             } else if (arg == '-v' || arg == '--verbose') {
@@ -369,8 +367,8 @@ class App {
         if ((index = process.argv.indexOf('--profile')) >= 0) {
             profile = process.argv[index + 1]
         }
-        profile = profile || config.profile || data.profile || process.env.PROFILE || 'dev'
-        this.trace(`Using profile ${profile}`)
+        profile = profile || config.profile || data.profile || process.env.PROFILE
+        this.trace(`Configuration profile ${profile}`)
 
         if (profile && data.profiles) {
             Blend(data, data.profiles[profile])
