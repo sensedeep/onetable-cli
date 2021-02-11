@@ -1,0 +1,29 @@
+/*
+    Sample migrate.json with all possible properties
+ */
+{
+    crypto: {
+        cipher: 'aes-256-gcm',
+        password: 'your-secret-encryption-password'
+    },
+    delimiter: ':',
+    dir: '.',
+    hidden: true,
+    nulls: false,
+    typeField: '_type',
+    schema: './schema.js',
+    profiles: {
+        dev: {
+            name: 'dev-database',
+            endpoint: 'http://localhost:8000'
+        },
+        prod: {
+            name: 'prod-database',
+            aws: {
+                accessKeyId: 'access-key',
+                secretAccessKey: 'secret-key',
+                region: 'us-east-1'
+            }
+        }
+    }
+}
