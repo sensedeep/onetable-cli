@@ -14,11 +14,11 @@
         },
         delimiter: ':',
         dir: './migrations-directory',
-        hidden: true,
-        null: false,
+        hidden: false,
+        name: 'sensedeep-dev',
+        nulls: false,
         schema: 'path/to/schema.js',
         typeField: 'type',
-        name: 'sensedeep-dev',
  */
 
 import Fs from 'fs'
@@ -280,7 +280,7 @@ class App {
         if (this.dry) {
             print(`${this.dry} ${action} ${versions.length} ${noun} to version ${target}.`)
         } else {
-            print(`Confirm ${versions.length} ${action} ${noun} to version ${target} on ${this.config.profile}.`)
+            print(`Confirm ${versions.length} "${action}" ${noun} to version "${target}" for database "${this.config.onetable.name}" using profile "${this.config.profile}".`)
         }
         print(`\nMigrations to ${direction < 0 ? 'revert' : 'apply'}:`)
         for (let version of versions) {
@@ -396,7 +396,6 @@ class App {
             print(...args)
         }
     }
-
 }
 
 async function main() {
