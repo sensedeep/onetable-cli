@@ -44,7 +44,6 @@ Then create a `migrate.json` with your DynamoDB OneTable configuration. We use J
 {
     name: 'your-dynamo-table',
     schema: 'schema.js',
-    dir: '.'
 }
 ```
 
@@ -142,11 +141,17 @@ migrate --dry up
 ### Command Line Options
 
 ```
+--aws-access-key                    # AWS access key
+--aws-region                        # AWS service region
+--aws-secret-key                    # AWS secret key
+--bump [major,minor,patch]          # Version digit to bump in generation
 --config ./migrate.json             # Migration configuration
 --dir directory                     # Change to directory to execute
+--dry                               # Dry-run, don't execute
 --endpoint http://host:port         # Database endpoint
---profile prod|stage|...            # Select configuration profile
---schema schema.js                  # Database schema module
+--force                             # Force action without confirmation
+--profile prod|qa|dev|...           # Select configuration profile
+--schema ./path/to/schema.js        # Database schema module
 --verbose
 ```
 

@@ -58,14 +58,17 @@ migrate usage:
   migrate status                        # Show most recently applied migration
   migrate up                            # Apply the next migration
   Options:
+    --aws-access-key                    # AWS access key
+    --aws-region                        # AWS service region
+    --aws-secret-key                    # AWS secret key
     --bump [major,minor,patch]          # Version digit to bump in generation
-    --dry                               # Dry-run
-    --dir directory                     # Change to directory to execute
-    --force                             # Force action without confirmation
-    --endpoint http://host:port         # Database endpoint
     --config migrate.js                 # Migration configuration file
-    --profile prod|stage|...            # Select configuration profile
-    --schema schema.js                  # Database schema module
+    --dir directory                     # Change to directory to execute
+    --dry                               # Dry-run, don't execute
+    --endpoint http://host:port         # Database endpoint
+    --force                             # Force action without confirmation
+    --profile prod|qa|dev|...           # Select configuration profile
+    --schema ./path/to/schema.js        # Database schema module
     --verbose
 `
 
@@ -335,11 +338,13 @@ class App {
                 this.usage()
             } else if (arg == '--profile') {
                 this.profile = argv[++i]
+            } else if (arg == '--region') {
+                this.aws.region = argv[++i]
             } else if (arg == '--schema' || arg == '-s') {
                 this.schema = argv[++i]
             } else if (arg == '-v' || arg == '--verbose') {
                 this.verbose++
-            } else if (arg[0] == '-') {
+            } else if (arg[0] == '-' || arg.indexOf('-') >= 0) {
                 this.usage()
             } else {
                 break
