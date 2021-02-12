@@ -26,6 +26,7 @@ import Path from 'path'
 import Readline from 'readline'
 import Semver from 'semver'
 import AWS from 'aws-sdk'
+
 import Migrate from 'onetable-migrate'
 import {Table} from 'dynamodb-onetable'
 
@@ -69,7 +70,8 @@ migrate usage:
     --force                             # Force action without confirmation
     --profile prod|qa|dev|...           # Select configuration profile
     --schema ./path/to/schema.js        # Database schema module
-    --verbose
+    --verbose                           # Emit more progress information
+    --version                           # Emit version number
 `
 
 const RESET_VERSION = 'latest'
@@ -340,8 +342,10 @@ class App {
                 this.profile = argv[++i]
             } else if (arg == '--schema' || arg == '-s') {
                 this.schema = argv[++i]
-            } else if (arg == '-v' || arg == '--verbose') {
+            } else if (arg == '--verbose' || arg == '-v') {
                 this.verbose++
+            } else if (arg == '--version') {
+                this.printVersion()
             } else if (arg[0] == '-' || arg.indexOf('-') >= 0) {
                 this.usage()
             } else {
@@ -395,6 +399,13 @@ class App {
         if (this.verbose) {
             print(...args)
         }
+    }
+
+    async printVersion() {
+        let dir = Path.dirname(import.meta.url.replace('file://', ''))
+        let config = await File.readJson(dir + '/../package.json')
+        print(config.version)
+        process.exit(0)
     }
 }
 
