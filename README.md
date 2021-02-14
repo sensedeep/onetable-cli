@@ -1,4 +1,5 @@
 # OneTable Migrate CLI
+One table to rule them all.
 
 [![npm](https://img.shields.io/npm/v/onetable-cli.svg)](https://www.npmjs.com/package/onetable-cli)
 [![npm](https://img.shields.io/npm/l/onetable-cli.svg)](https://www.npmjs.com/package/onetable-cli)
@@ -205,6 +206,13 @@ To access a local DynamoDB database, set the migrate.json `aws.endpoint` propert
 }
 ```
 
+### Remote Connections
+
+The OneTable CLI uses the [OneTable Migrate](https://www.npmjs.com/package/onetable-migrate) controller library internally to manage migrations. As such, DynamoDB I/O is performed from within the OneTable CLI process. This means I/O travels to and from the system hosting the OneTable CLI process.
+
+While this is fine for development databases and smaller DynamoDB tables, if you have very large database updates, you should run the CLI process from a Lambda or EC2 instance in the same Region and AZ as your DynamoDB instance. This will greatly accelerate your database migrations compared with running the CLI on-prem.
+
+In the near future, a remote API will be added to the OneTable Migrate library to permit communications with a remote CLI instance. This will then support running the OneTable Migrate controller in a Lambda co-located in the same Region/AZ as your DynamodDB nstance. With this split deployment of CLI and Migrate controller, higher volume migrations execute more quickly.
 
 ### References
 
