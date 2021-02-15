@@ -10,15 +10,17 @@
     Reads migrate.json:
         crypto: {
             "cipher": "aes-256-gcm",
-            "password": "1f2e2-d27f9-aa3a2-3f7bc-3a716-fc73e"
+            "password": "1f2e2-eeeee-aa3a2-12345-3a716-fedca"
         },
         delimiter: ':',
         dir: './migrations-directory',
         hidden: false,
-        name: 'sensedeep-dev',
+        name: 'table-name',
         nulls: false,
         schema: 'path/to/schema.js',
         typeField: 'type',
+        aws: {accessKeyId, secretAccessKey, region},
+        arn: 'lambda-arn'
  */
 
 import Fs from 'fs'
@@ -204,6 +206,9 @@ class CLI {
         }
     }
 
+    /*
+        Move to the target version
+     */
     async move(target) {
         let direction
         let outstanding = await this.migrate.getOutstandingVersions()
@@ -365,10 +370,8 @@ class CLI {
 
     /*
         Ready json config files and blend contents. Strategy is:
-
-        config = migrate.json | migrate.json:config files
-
-        Blend properties under profiles[profile]: to the top level. Supports profiles: dev, qa, prod,...
+            config = migrate.json | migrate.json:config files
+            Blend properties under profiles[profile]: to the top level. Supports profiles: dev, qa, prod,...
      */
     async getConfig() {
         let migrateConfig = this.migrateConfig || 'migrate.json'
@@ -445,12 +448,10 @@ class Proxy {
         return await this.invoke('findPastMigrations')
     }
 
-    //CHANGE API
     async getCurrentVersion() {
         return await this.invoke('getCurrentVersion')
     }
 
-    //CHANGE API
     async getOutstandingVersions(limit = Number.MAX_SAFE_INTEGER) {
         return await this.invoke('getOutstandingVersions')
     }
@@ -458,7 +459,6 @@ class Proxy {
     async invoke(action, args) {
         let cfg = Object.assign({}, this.config)
         cfg.crypt = this.crypto
-        //MOB TRACE
         let params = {
             action: action,
             config: this.config,
@@ -521,4 +521,5 @@ function error(...args) {
     process.exit(1)
 }
 
+//  Ah, if only for a top-level await
 main()
