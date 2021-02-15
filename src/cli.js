@@ -66,6 +66,7 @@ migrate usage:
     --aws-secret-key                    # AWS secret key
     --bump [major,minor,patch]          # Version digit to bump in generation
     --config migrate.js                 # Migration configuration file
+    --crypto cipher:password            # Crypto to use for encrypted attributes
     --dir directory                     # Change to directory to execute
     --dry                               # Dry-run, don't execute
     --endpoint http://host:port         # Database endpoint
@@ -108,7 +109,7 @@ class CLI {
             OneTable expects the crypto to be defined under a "primary" property.
          */
         let cot = config.onetable
-        let crypto = cot.crypto || config.crypto
+        let crypto = this.crypto || cot.crypto || config.crypto
         if (crypto) {
             cot.crypto = crypto.primary ? crypto : {primary: crypto}
         }
@@ -341,6 +342,9 @@ class CLI {
                 this.bump = argv[++i]
             } else if (arg == '--config' || arg == '-c') {
                 this.migrateConfig = argv[++i]
+            } else if (arg == '--crypto') {
+                let {cipher, password} = argv[++i]
+                this.crypto = { primary: { cipher, password }}
             } else if (arg == '--dir' || arg == '-d') {
                 process.chdir(argv[++i])
             } else if (arg == '--dry') {
@@ -458,7 +462,7 @@ class Proxy {
 
     async invoke(action, args) {
         let cfg = Object.assign({}, this.config)
-        cfg.crypt = this.crypto
+        cfg.crypto = this.crypto
         let params = {
             action: action,
             config: this.config,

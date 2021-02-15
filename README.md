@@ -148,13 +148,15 @@ migrate --dry up
 --aws-secret-key                    # AWS secret key
 --bump [major,minor,patch]          # Version digit to bump in generation
 --config ./migrate.json             # Migration configuration
+--crypto cipher:password            # Crypto to use for encrypted attributes
 --dir directory                     # Change to directory to execute
 --dry                               # Dry-run, don't execute
 --endpoint http://host:port         # Database endpoint
 --force                             # Force action without confirmation
 --profile prod|qa|dev|...           # Select configuration profile
 --schema ./path/to/schema.js        # Database schema module
---verbose
+--verbose                           # Emit more progress information
+--version                           # Emit version number
 ```
 
 
