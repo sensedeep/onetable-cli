@@ -76,7 +76,7 @@ migrate usage:
 
 const RESET_VERSION = 'latest'
 
-class App {
+class CLI {
     usage() {
         error(Usage)
     }
@@ -95,36 +95,40 @@ class App {
             error('Missing database configuration')
         }
         this.config = config
+        this.trace(`Using configuration profile ${config.profile}`)
 
         this.log = new Log(config.log, {app: 'migrate', source: 'migrate'})
         if (this.verbose) {
             this.log.setLevels({migrate: this.verbose + 4})
         }
 
-        let params = config.onetable
-        let endpoint = this.endpoint || params.endpoint || process.env.DB_ENDPOINT
-        let args = this.client = endpoint ? { region: 'localhost', endpoint } : params.aws
-
-        this.trace(`Accessing dynamodb`, {args})
-        params.client = new AWS.DynamoDB.DocumentClient(args)
-        params.schema = await this.readSchema(config)
-
-        if (params.crypto) {
-            params.crypto = {primary: params.crypto}
+        /*
+            OneTable expects the crypto to be defined under a "primary" property.
+         */
+        let cot = config.onetable
+        let crypto = cot.crypto || config.crypto
+        if (crypto) {
+            cot.crypto = crypto.primary ? crypto : {primary: crypto}
         }
-        let onetable = new Table(params)
-        this.migrate = new Migrate(onetable, config)
+        cot.schema = await this.readSchema(cot.schema)
+        this.trace(`Using config`, {cot})
 
-        try {
-            await this.migrate.init()
-        } catch (err) {
-            error(`Cannot access database`, {params})
+        if (cot.arn) {
+            this.migrate = new Proxy(config, this)
+        } else {
+            let endpoint = this.endpoint || cot.endpoint || process.env.DB_ENDPOINT
+            let args = endpoint ? { region: 'localhost', endpoint } : cot.aws
+
+            this.trace(`Accessing dynamodb`, {args})
+            cot.client = new AWS.DynamoDB.DocumentClient(args)
+
+            let onetable = new Table(cot)
+            this.migrate = new Migrate(onetable, config)
         }
-        this.pastMigrations = await this.migrate.findPastMigrations()
     }
 
-    async readSchema(config) {
-        let path = Path.resolve(process.cwd(), this.schema || config.onetable.schema || './schema.json')
+    async readSchema(path) {
+        path = Path.resolve(process.cwd(), this.schema || path || './schema.json')
         if (!Fs.existsSync(path)) {
             error(`Cannot find schema definition in "${path}"`)
         }
@@ -144,20 +148,22 @@ class App {
         } else if (cmd == 'reset') {
             await this.move(RESET_VERSION)
         } else if (cmd == 'status') {
-            this.status()
+            await this.status()
         } else if (cmd == 'list') {
-            this.list()
+            await this.list()
         } else if (cmd == 'outstanding') {
             await this.outstanding()
         } else if (cmd == 'generate') {
             await this.generate()
         } else if (args.length) {
             await this.move(args[0])
+        } else {
+            this.usage()
         }
     }
 
     async generate() {
-        let versions = this.migrate.getOutstandingVersions()
+        let versions = await this.migrate.getOutstandingVersions()
         let version = versions.length ? versions.pop() : this.migrate.getCurrentVersion()
         version = Semver.inc(version, this.bump)
         let dir = Path.resolve(this.config.onetable.migrations || '.')
@@ -166,27 +172,29 @@ class App {
             error(`Migration ${path} already exists`)
         } else {
             await File.writeFile(path, MigrationTemplate)
+            print(`Generated ${path}`)
         }
     }
 
-    status() {
-        print(this.migrate.getCurrentVersion())
+    async status() {
+        print(await this.migrate.getCurrentVersion())
     }
 
-    list() {
-        if (this.pastMigrations.length == 0) {
-            print('\nNo migrations applied')
+    async list() {
+        let pastMigrations = await this.migrate.findPastMigrations()
+        if (pastMigrations.length == 0) {
+            print('No migrations applied')
         } else {
-            print('\nDate                  Version   Description')
+            print('Date                   Version   Description')
         }
-        for (let m of this.pastMigrations) {
+        for (let m of pastMigrations) {
             let date = Dates.format(m.time, 'HH:MM:ss mmm d, yyyy')
             print(`${date}  ${m.version}     ${m.description}`)
         }
     }
 
     async outstanding() {
-        let versions = this.migrate.getOutstandingVersions()
+        let versions = await this.migrate.getOutstandingVersions()
         if (versions.length == 0) {
             print('none')
         } else {
@@ -198,7 +206,7 @@ class App {
 
     async move(target) {
         let direction
-        let outstanding = this.migrate.getOutstandingVersions()
+        let outstanding = await this.migrate.getOutstandingVersions()
 
         if (!target) {
             if (outstanding.length > 0) {
@@ -208,12 +216,13 @@ class App {
                 return
             }
         }
-        let current = this.migrate.getCurrentVersion()
+        let pastMigrations = await this.migrate.findPastMigrations()
+        let current = pastMigrations.length ? pastMigrations[pastMigrations.length - 1].version : '0.0.0'
         let versions = []
 
         if (target == 'latest') {
             direction = 0
-            this.pastMigrations = []
+            pastMigrations = []
             versions = [RESET_VERSION]
 
         } else if (target == 'up') {
@@ -226,17 +235,17 @@ class App {
 
         } else if (target == 'down') {
             direction = -1
-            let version = this.pastMigrations.slice(0).reverse().map(m => m.version).shift()
+            let version = pastMigrations.slice(0).reverse().map(m => m.version).shift()
             if (version) {
                 versions = [version]
             }
 
         } else if (Semver.compare(target, current) < 0) {
             direction = -1
-            if (target != '0.0.0' && !this.pastMigrations.find(m => m.version == target)) {
+            if (target != '0.0.0' && !pastMigrations.find(m => m.version == target)) {
                 error(`Cannot find target migration ${target} in applied migrations`)
             }
-            versions = this.pastMigrations.reverse().map(m => m.version).filter(v => Semver.compare(v, target) > 0)
+            versions = pastMigrations.reverse().map(m => m.version).filter(v => Semver.compare(v, target) > 0)
 
         } else {
             direction = 1
@@ -261,7 +270,6 @@ class App {
                 let migration = await this.migrate.apply(direction, version)
                 print(`${verb} "${migration.version} - ${migration.description}"`)
             }
-            await this.migrate.update()
             current = await this.migrate.getCurrentVersion()
             print(`\nCurrent database version: ${current}`)
         } catch (err) {
@@ -355,34 +363,45 @@ class App {
         return argv.slice(i)
     }
 
+    /*
+        Ready json config files and blend contents. Strategy is:
+
+        config = migrate.json | migrate.json:config files
+
+        Blend properties under profiles[profile]: to the top level. Supports profiles: dev, qa, prod,...
+     */
     async getConfig() {
-        let config = {}
-        if (Fs.existsSync('package.json')) {
-            config = await File.readJson('package.json')
+        let migrateConfig = this.migrateConfig || 'migrate.json'
+        if (!Fs.existsSync(migrateConfig)) {
+            error(`Cannot locate ${migrateConfig}`)
         }
-
-        let migrate = this.migrateConfig || 'migrate.json'
-        if (!Fs.existsSync(migrate)) {
-            error(`Cannot locate ${migrate}`)
-        }
-        let data = await File.readJson(migrate)
-
+        /*
+            Determine the stage profile. Priority: command line, migrate.json, package.json, PROFILE env
+         */
         let index, profile
         if ((index = process.argv.indexOf('--profile')) >= 0) {
             profile = process.argv[index + 1]
         }
-        profile = profile || config.profile || data.profile || process.env.PROFILE
-        this.trace(`Configuration profile ${profile}`)
+        let config = await File.readJson(migrateConfig)
 
-        if (profile && data.profiles) {
-            Blend(data, data.profiles[profile])
-            delete data.profiles
-        }
-        if (!data.onetable) {
-            data = {onetable: data}
-        }
-        config = Blend(config, data)
+        profile = profile || config.profile || process.env.PROFILE
 
+        if (profile && config.profiles) {
+            Blend(config, config.profiles[profile])
+            delete config.profiles
+        }
+        if (!config.onetable) {
+            config = {onetable: config}
+        }
+        for (let path of config.onetable.config) {
+            if (Fs.existsSync(path)) {
+                this.trace(`Loading ${path}`)
+                let data = await File.readJson(path)
+                config = Blend(config, data)
+            } else {
+                error(`Cannot read ${path}`)
+            }
+        }
         if (profile && config.profiles) {
             Blend(config, config.profiles[profile])
             delete config.profiles
@@ -390,8 +409,8 @@ class App {
         if (profile) {
             config.profile = profile
         }
-        config.onetable.aws = config.onetable.aws || this.aws
         this.profile = config.profile
+        config.onetable.aws = config.onetable.aws || this.aws
         return config
     }
 
@@ -409,13 +428,85 @@ class App {
     }
 }
 
+class Proxy {
+    constructor(config, cli) {
+        this.config = config
+        this.cli = cli
+        let args = config.onetable.aws
+        this.arn = config.onetable.arn
+        this.lambda = new AWS.Lambda(args)
+    }
+
+    async apply(direction, version) {
+        return await this.invoke('apply', {direction, version})
+    }
+
+    async findPastMigrations() {
+        return await this.invoke('findPastMigrations')
+    }
+
+    //CHANGE API
+    async getCurrentVersion() {
+        return await this.invoke('getCurrentVersion')
+    }
+
+    //CHANGE API
+    async getOutstandingVersions(limit = Number.MAX_SAFE_INTEGER) {
+        return await this.invoke('getOutstandingVersions')
+    }
+
+    async invoke(action, args) {
+        let cfg = Object.assign({}, this.config)
+        cfg.crypt = this.crypto
+        //MOB TRACE
+        let params = {
+            action: action,
+            config: this.config,
+        }
+        if (args) {
+            params.args = args
+        }
+        let payload = JSON.stringify(params, null, 2)
+        this.trace(`Invoke migrate proxy`, {action, args, payload, arn: this.arn})
+
+        let result = await this.lambda.invoke({
+            InvocationType: 'RequestResponse',
+            FunctionName: this.arn,
+            Payload: payload,
+            LogType: 'Tail',
+        }).promise()
+
+        if (result.StatusCode != 200) {
+            error(`Cannot invoke ${action}: bad status code ${result.StatusCode}`)
+
+        } else if (result && result.Payload) {
+            result = JSON.parse(result.Payload)
+            if (result.errorMessage) {
+                error(`Cannot invoke ${action}: ${result.errorMessage}`)
+            } else {
+                result = result.body
+            }
+        } else {
+            error(`Cannot invoke ${action}: no result`)
+        }
+        this.trace(`Migrate proxy results`, {args, result})
+        return result
+    }
+
+    trace(...args) {
+        this.cli.trace(...args)
+    }
+}
+
 async function main() {
     try {
-        let app = new App()
-        await app.init()
-        await app.command()
+        let cli = new CLI()
+        await cli.init()
+        await cli.command()
     } catch (err) {
+        print(err)
         error(err.message)
+        throw err
     }
     process.exit(0)
 }

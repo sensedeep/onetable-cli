@@ -18,6 +18,7 @@ The OneTable CLI was used in production by the [SenseDeep Serverless Troubleshoo
 * Mutate database schema and contents via discrete, reversible migrations.
 * Migrate upwards, downwards, to specific versions.
 * Automated, ordered sequencing of migrations in both directions.
+* Operate on local databases, remote databases via AWS credentials and via Lambda proxy.
 * Add and remove seed data in any migration.
 * Quick reset of DynamoDB databases for development.
 * Show database status and list applied migrations.
@@ -164,6 +165,7 @@ You can configure access to your DynamoDB table in your AWS account several ways
 * via command line options
 * via the migrate.json
 * via environment variables
+* via proxy
 
 Via command line option:
 
@@ -206,13 +208,25 @@ To access a local DynamoDB database, set the migrate.json `aws.endpoint` propert
 }
 ```
 
+To communicate with a Lambda hosting the [OneTable Migrate Library](), set the `arn` field to the ARN of your Lambda function.
+Then define your AWS credentials as described above to grant access for the CLI to your Lambda.
+
+```
+{
+    arn: 'arn:aws:lambda:us-east-1:123456789012:function:migrate-prod-invoke'
+}
+```
+
+
 ### Remote Connections
 
 The OneTable CLI uses the [OneTable Migrate](https://www.npmjs.com/package/onetable-migrate) controller library internally to manage migrations. As such, DynamoDB I/O is performed from within the OneTable CLI process. This means I/O travels to and from the system hosting the OneTable CLI process.
 
-While this is fine for development databases and smaller DynamoDB tables, if you have very large database updates, you should run the CLI process from a Lambda or EC2 instance in the same Region and AZ as your DynamoDB instance. This will greatly accelerate your database migrations compared with running the CLI on-prem.
+While this is fine for development databases and smaller DynamoDB tables, if you have very large database updates, you should run the CLI process from a Lambda in the same AWS region and AZ as your DynamoDB instance. For large databases or complex migrations, this will greatly accelerate your database migrations compared with running the CLI on-prem.
 
-In the near future, a remote API will be added to the OneTable Migrate library to permit communications with a remote CLI instance. This will then support running the OneTable Migrate controller in a Lambda co-located in the same Region/AZ as your DynamodDB nstance. With this split deployment of CLI and Migrate controller, higher volume migrations execute more quickly.
+If you have large databases or complex migrations, you should host the [OneTable Migrate](https://www.npmjs.com/package/onetable-migrate) library via AWS Lambda so that it executes in the same AWS region and availablity zone as your DynamoDB instance. This will accelerate migrations by minimizing the I/O transfer time. With this split deployment of CLI and Migration library, higher volume migrations execute more quickly.
+
+To configure remote control of migrations, set the migrate.json `arn` property to the ARN of your migration Lambda that hosts the Migration Library. See [OneTable Migrate](https://www.npmjs.com/package/onetable-migrate) for more details about Lambda hosting of the OneTable Migrate library.
 
 ### References
 
