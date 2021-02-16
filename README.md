@@ -154,8 +154,8 @@ migrate --dry up
 --endpoint http://host:port         # Database endpoint
 --force                             # Force action without confirmation
 --profile prod|qa|dev|...           # Select configuration profile
+--quiet                             # Run as quietly as possible
 --schema ./path/to/schema.js        # Database schema module
---verbose                           # Emit more progress information
 --version                           # Emit version number
 ```
 

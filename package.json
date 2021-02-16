@@ -6,10 +6,12 @@
     "keywords": [
         "dynamodb",
         "onetable",
-        "migrate",
         "serverless",
         "aws",
-        "nosql"
+        "nosql",
+        "singletable",
+        "datamapper",
+        "dynamo"
     ],
     "author": "Michael O'Brien <mob@sensedeep.com>",
     "license": "MIT",

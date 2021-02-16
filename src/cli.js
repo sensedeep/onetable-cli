@@ -67,17 +67,19 @@ migrate usage:
     --bump [major,minor,patch]          # Version digit to bump in generation
     --config migrate.js                 # Migration configuration file
     --crypto cipher:password            # Crypto to use for encrypted attributes
+    --debug                             # Show debug trace
     --dir directory                     # Change to directory to execute
     --dry                               # Dry-run, don't execute
     --endpoint http://host:port         # Database endpoint
     --force                             # Force action without confirmation
     --profile prod|qa|dev|...           # Select configuration profile
+    --quiet                             # Run as quietly as possible
     --schema ./path/to/schema.js        # Database schema module
-    --verbose                           # Emit more progress information
     --version                           # Emit version number
 `
 
 const RESET_VERSION = 'latest'
+const DebugVerbosity = 10
 
 class CLI {
     usage() {
@@ -85,7 +87,7 @@ class CLI {
     }
 
     constructor() {
-        this.verbose = 0
+        this.verbosity = 0
         this.dry = ''
         this.bump = 'patch'
         this.aws = {}
@@ -98,11 +100,11 @@ class CLI {
             error('Missing database configuration')
         }
         this.config = config
-        this.trace(`Using configuration profile ${config.profile}`)
+        this.debug(`Using configuration profile ${config.profile}`)
 
         this.log = new Log(config.log, {app: 'migrate', source: 'migrate'})
-        if (this.verbose) {
-            this.log.setLevels({migrate: this.verbose + 4})
+        if (this.verbosity) {
+            this.log.setLevels({migrate: this.verbosity + 4})
         }
 
         /*
@@ -114,15 +116,18 @@ class CLI {
             cot.crypto = crypto.primary ? crypto : {primary: crypto}
         }
         cot.schema = await this.readSchema(cot.schema)
-        this.trace(`Using config`, {cot})
 
         if (cot.arn) {
+            this.verbose(`Access DynamoDb via proxy at ${cot.arn}`)
             this.migrate = new Proxy(config, this)
         } else {
             let endpoint = this.endpoint || cot.endpoint || process.env.DB_ENDPOINT
             let args = endpoint ? { region: 'localhost', endpoint } : cot.aws
-
-            this.trace(`Accessing dynamodb`, {args})
+            let location = JSON.serialize(args)
+            if (Object.keys(args).length == 0) {
+                location = process.env.AWS_PROFILE
+            }
+            this.verbose(`Access DynamoDb at ${location}`)
             cot.client = new AWS.DynamoDB.DocumentClient(args)
 
             let onetable = new Table(cot)
@@ -135,7 +140,7 @@ class CLI {
         if (!Fs.existsSync(path)) {
             error(`Cannot find schema definition in "${path}"`)
         }
-        this.trace(`Importing schema from "${path}"`)
+        this.debug(`Importing schema from "${path}"`)
         try {
             let schema = (await import(path)).default
             return schema
@@ -185,14 +190,20 @@ class CLI {
 
     async list() {
         let pastMigrations = await this.migrate.findPastMigrations()
-        if (pastMigrations.length == 0) {
-            print('No migrations applied')
+        if (this.quiet) {
+            for (let m of pastMigrations) {
+                print(m.version)
+            }
         } else {
-            print('Date                   Version   Description')
-        }
-        for (let m of pastMigrations) {
-            let date = Dates.format(m.time, 'HH:MM:ss mmm d, yyyy')
-            print(`${date}  ${m.version}     ${m.description}`)
+            if (pastMigrations.length == 0) {
+                print('No migrations applied')
+            } else {
+                print('Date                   Version   Description')
+            }
+            for (let m of pastMigrations) {
+                let date = Dates.format(m.time, 'HH:MM:ss mmm d, yyyy')
+                print(`${date}  ${m.version}     ${m.description}`)
+            }
         }
     }
 
@@ -345,6 +356,8 @@ class CLI {
             } else if (arg == '--crypto') {
                 let {cipher, password} = argv[++i]
                 this.crypto = { primary: { cipher, password }}
+            } else if (arg == '--debug') {
+                this.verbosity = DebugVerbosity
             } else if (arg == '--dir' || arg == '-d') {
                 process.chdir(argv[++i])
             } else if (arg == '--dry') {
@@ -357,10 +370,12 @@ class CLI {
                 this.usage()
             } else if (arg == '--profile') {
                 this.profile = argv[++i]
+            } else if (arg == '--quiet' || arg == '-q') {
+                this.quiet = true
             } else if (arg == '--schema' || arg == '-s') {
                 this.schema = argv[++i]
             } else if (arg == '--verbose' || arg == '-v') {
-                this.verbose++
+                this.verbosity = DebugVerbosity
             } else if (arg == '--version') {
                 this.printVersion()
             } else if (arg[0] == '-' || arg.indexOf('-') >= 0) {
@@ -402,7 +417,7 @@ class CLI {
         }
         for (let path of config.onetable.config) {
             if (Fs.existsSync(path)) {
-                this.trace(`Loading ${path}`)
+                this.debug(`Loading ${path}`)
                 let data = await File.readJson(path)
                 config = Blend(config, data)
             } else {
@@ -421,8 +436,14 @@ class CLI {
         return config
     }
 
-    trace(...args) {
-        if (this.verbose) {
+    verbose(...args) {
+        if (!this.quiet) {
+            print(...args)
+        }
+    }
+
+    debug(...args) {
+        if (this.verbosity >= DebugVerbosity) {
             print(...args)
         }
     }
@@ -471,7 +492,7 @@ class Proxy {
             params.args = args
         }
         let payload = JSON.stringify(params, null, 2)
-        this.trace(`Invoke migrate proxy`, {action, args, payload, arn: this.arn})
+        this.debug(`Invoke migrate proxy`, {action, args, arn: this.arn})
 
         let result = await this.lambda.invoke({
             InvocationType: 'RequestResponse',
@@ -493,12 +514,12 @@ class Proxy {
         } else {
             error(`Cannot invoke ${action}: no result`)
         }
-        this.trace(`Migrate proxy results`, {args, result})
+        this.debug(`Migrate proxy results`, {args, result})
         return result
     }
 
-    trace(...args) {
-        this.cli.trace(...args)
+    debug(...args) {
+        this.cli.debug(...args)
     }
 }
 
@@ -514,7 +535,6 @@ async function main() {
     }
     process.exit(0)
 }
-
 
 function print(...args) {
     console.log(...args)
