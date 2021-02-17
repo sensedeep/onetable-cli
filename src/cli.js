@@ -118,7 +118,7 @@ class CLI {
         cot.schema = await this.readSchema(cot.schema)
 
         if (cot.arn) {
-            this.verbose(`Accessing DynamoDb via proxy at ${cot.arn}`)
+            this.verbose(`Accessing DynamoDb "${cot.name}" via proxy at ${cot.arn}`)
             this.migrate = new Proxy(config, this)
         } else {
             let endpoint = this.endpoint || cot.endpoint || process.env.DB_ENDPOINT
@@ -126,6 +126,7 @@ class CLI {
             if (endpoint) {
                 args = { region: 'localhost', endpoint }
                 location = 'localhost'
+                delete process.env.AWS_PROFILE
             } else {
                 args = cot.aws
                 if (Object.keys(args).length == 0) {
@@ -134,7 +135,7 @@ class CLI {
                     location = args.region
                 }
             }
-            this.verbose(`Accessing DynamoDb at "${location}"`)
+            this.verbose(`Accessing DynamoDb "${cot.name}" at "${location}"`)
             cot.client = new AWS.DynamoDB.DocumentClient(args)
 
             let onetable = new Table(cot)
