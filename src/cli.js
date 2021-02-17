@@ -383,7 +383,7 @@ class CLI {
             } else if (arg == '--schema' || arg == '-s') {
                 this.schema = argv[++i]
             } else if (arg == '--verbose' || arg == '-v') {
-                this.verbosity = DebugVerbosity
+                this.verbosity = 1
             } else if (arg == '--version') {
                 this.printVersion()
             } else if (arg[0] == '-' || arg.indexOf('-') >= 0) {
