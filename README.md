@@ -243,13 +243,13 @@ Sample latest.js migration
 export default {
     description: 'Database reset to latest version',
     async up(db, migrate) {
-        if (migrate.params.profile != 'prod') {
+        if (migrate.params.profile == 'dev') {
             await removeAllItems(db)
         }
         //  Provision required database data
     },
     async down(db, migrate) {
-        if (migrate.params.profile != 'prod') {
+        if (migrate.params.profile == 'dev') {
             await removeAllItems(db)
         }
     },
