@@ -78,7 +78,7 @@ migrate usage:
     --version                           # Emit version number
 `
 
-const RESET_VERSION = 'latest'
+const LATEST_VERSION = 'latest'
 const DebugVerbosity = 10
 
 class CLI {
@@ -162,7 +162,7 @@ class CLI {
         if (cmd == 'all') {
             await this.move()
         } else if (cmd == 'reset') {
-            await this.move(RESET_VERSION)
+            await this.move(LATEST_VERSION)
         } else if (cmd == 'status') {
             await this.status()
         } else if (cmd == 'list') {
@@ -248,7 +248,7 @@ class CLI {
         if (target == 'latest') {
             direction = 0
             pastMigrations = []
-            versions = [RESET_VERSION]
+            versions = [LATEST_VERSION]
 
         } else if (target == 'up') {
             direction = 1

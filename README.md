@@ -122,7 +122,7 @@ Show outstanding migrations not yet applied
 migrate outstanding
 ```
 
-Reset the database to the latest migration. This will erase the database and apply the `latest.js` migration. The purpose of the `latest` migration is to have one migration that can quickly create a new database with the latest schema without having to apply all historical migrations.
+Reset the database to the latest migration. This should the database and apply the `latest.js` migration. The purpose of the `latest` migration is to have one migration that can quickly create a new database with the latest schema without having to apply all historical migrations.
 
 ```sh
 migrate reset
@@ -229,6 +229,40 @@ While this is fine for development databases and smaller DynamoDB tables, if you
 If you have large databases or complex migrations, you should host the [OneTable Migrate](https://www.npmjs.com/package/onetable-migrate) library via AWS Lambda so that it executes in the same AWS region and availablity zone as your DynamoDB instance. This will accelerate migrations by minimizing the I/O transfer time. With this split deployment of CLI and Migration library, higher volume migrations execute more quickly.
 
 To configure remote control of migrations, set the migrate.json `arn` property to the ARN of your migration Lambda that hosts the Migration Library. See [OneTable Migrate](https://www.npmjs.com/package/onetable-migrate) for more details about Lambda hosting of the OneTable Migrate library.
+
+### Latest Migration
+
+You can create a special `latest` migration that is used for the `migrate reset` command which is is a quick way to get a development database up to the current version.
+
+The latest migration should remove all data from the database and then initialize the database equivalent to applying all migrations.
+
+When creating your `latest.js` migration, be very careful when removing all items from the database. We typically protect this with a test against the deployment profile to ensure you never do this on a production database.
+
+Sample latest.js migration
+```javascript
+export default {
+    description: 'Database reset to latest version',
+    async up(db, migrate) {
+        if (migrate.params.profile != 'prod') {
+            await removeAllItems(db)
+        }
+        //  Provision required database data
+    },
+    async down(db, migrate) {
+        if (migrate.params.profile != 'prod') {
+            await removeAllItems(db)
+        }
+    },
+}
+async function removeAllItems(db) {
+    do {
+        items = await db.scanItems({}, {limit: 100})
+        for (let item of items) {
+            await db.deleteItem(item)
+        }
+    } while (items.length)
+}
+```
 
 ### References
 
