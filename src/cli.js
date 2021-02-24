@@ -308,14 +308,15 @@ class CLI {
         }
         let action = ['downgrade', 'reset', 'upgrade'][direction + 1]
         let noun = versions.length > 1 ? 'changes' : 'change'
+        let fromto = action == 'downgrade' ? 'from' : 'to'
         let target = versions[versions.length - 1]
         if (this.config.profile == 'prod') {
             await this.rusure('WARNING: DANGEROUS: You are working on a production database! ')
         }
         if (this.dry) {
-            print(`${this.dry} ${action} ${versions.length} ${noun} to version ${target}.`)
+            print(`${this.dry} ${action} ${versions.length} ${noun} ${fromto} version ${target}.`)
         } else {
-            print(`Confirm ${versions.length} "${action}" ${noun} to version "${target}" for database "${this.config.onetable.name}" using profile "${this.config.profile}".`)
+            print(`Confirm ${versions.length} "${action}" ${noun} ${fromto} version "${target}" for database "${this.config.onetable.name}" using profile "${this.config.profile}".`)
         }
         print(`\nMigrations to ${direction < 0 ? 'revert' : 'apply'}:`)
         for (let version of versions) {
