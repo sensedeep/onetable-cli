@@ -29,8 +29,8 @@ import Readline from 'readline'
 import Semver from 'semver'
 import AWS from 'aws-sdk'
 
-import Migrate from 'onetable-migrate'
 import {Table} from 'dynamodb-onetable'
+import {Migrate} from 'onetable-migrate'
 
 import Blend from 'js-blend'
 import Dates from 'js-dates'
