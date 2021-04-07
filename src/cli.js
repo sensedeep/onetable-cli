@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /*
-    cli.js - OneTable migration cli
+    onetable - OneTable cli
 
     Usage:
-        migrate list, status, outstanding
-        migrate all, reset, down, up, 1.2.3
-        migrate generate
+    Migrations:
+        onetable migrate [all, down, list, outstanding, reset, status, up, N.N.N]
+        onetable generate [migration]
 
     Reads migrate.json:
         crypto: {
@@ -48,9 +48,23 @@ export default {
     }
 }`
 
-const Usage = `
-migrate usage:
+const Types = {
+    String: 'string',
+    Number: 'number',
+    Boolean: 'boolean',
+    String: 'string',
+}
 
+const Usage = `
+onetable usage:
+
+  onetable migrate ...
+  onetable generate ...
+
+Generate:
+  generate migration
+
+Migrations:
   migrate 1.2.3                         # Apply migrations up or down to version 1.2.3
   migrate all                           # Apply all outstanding migrations (upwards)
   migrate down                          # Rervert the last applied migration
@@ -158,27 +172,38 @@ class CLI {
     }
     async command() {
         let args = this.args
-        let cmd = args[0]
-        if (cmd == 'all') {
-            await this.move()
-        } else if (cmd == 'reset') {
-            await this.move(LATEST_VERSION)
-        } else if (cmd == 'status') {
-            await this.status()
-        } else if (cmd == 'list') {
-            await this.list()
-        } else if (cmd == 'outstanding') {
-            await this.outstanding()
-        } else if (cmd == 'generate') {
-            await this.generate()
-        } else if (args.length) {
-            await this.move(args[0])
+        let scope = args[0]
+        let cmd = args[1]
+        if (scope == 'generate') {
+            if (cmd == 'migration') {
+                await this.generateMigration()
+            } else if (cmd == 'types') {
+                await this.generateTypes()
+            } else {
+                this.usage()
+            }
+        } else if (scope == 'migrate') {
+            if (cmd == 'all') {
+                await this.move()
+            } else if (cmd == 'reset') {
+                await this.move(LATEST_VERSION)
+            } else if (cmd == 'status') {
+                await this.status()
+            } else if (cmd == 'list') {
+                await this.list()
+            } else if (cmd == 'outstanding') {
+                await this.outstanding()
+            } else if (args.length) {
+                await this.move(args[0])
+            } else {
+                this.usage()
+            }
         } else {
             this.usage()
         }
     }
 
-    async generate() {
+    async generateMigration() {
         let versions = await this.migrate.getOutstandingVersions()
         let version = versions.length ? versions.pop() : this.migrate.getCurrentVersion()
         version = Semver.inc(version, this.bump)
@@ -190,6 +215,50 @@ class CLI {
             await File.writeFile(path, MigrationTemplate)
             print(`Generated ${path}`)
         }
+    }
+
+    getIndexed() {
+        let schema = this.config.onetable.schema
+        let indexed = {}
+        for (let index of Object.values(schema.indexes)) {
+            indexed[index.hash] = true
+            indexed[index.sort] = true
+        }
+        return indexed
+    }
+
+    //  Now that OneTable dynamically generate declarations, this is not typically needed.
+    async generateTypes(options = {}) {
+        let schema = this.config.onetable.schema
+        let indexed = this.getIndexed()
+        let out = []
+        let dir = Path.resolve(this.config.onetable.types || '.')
+        let path = `${dir}/Models.d.ts`
+        for (let [name, model] of Object.entries(schema.models)) {
+            out.push(`export type ${name} = {`)
+            let defs = []
+            for (let [prop, field] of Object.entries(model)) {
+                if (field.hidden || indexed[prop]) {
+                    if (options.hidden != true) {
+                        continue
+                    }
+                }
+                let sep = field.required ? ':' : '?:'
+                let type = (typeof field.type == 'function') ? field.type.name : field.type
+
+                if (type == 'Array') {
+                    defs.push(`${prop}: any[];`)
+
+                } else if (type == 'Object') {
+                    defs.push(`${prop}${sep} object;`)
+
+                } else {
+                    defs.push(`${prop}${sep} ${Types[type] || type};`)
+                }
+            }
+            out.push('    ' + defs.join('\n    ') + '\n}\n')
+        }
+        await File.writeFile(path, out.join('\n') + '\n')
     }
 
     async status() {

@@ -1,8 +1,8 @@
 {
     "name": "onetable-cli",
-    "version": "0.7.3",
+    "version": "1.0.0",
     "type": "module",
-    "description": "DynamoDB OneTable Migration CLI",
+    "description": "DynamoDB OneTable CLI",
     "keywords": [
         "dynamodb",
         "onetable",
@@ -16,7 +16,7 @@
     "author": "Michael O'Brien <mob@sensedeep.com>",
     "license": "MIT",
     "bin": {
-        "migrate": "dist/cli.js"
+        "onetable": "dist/cli.js"
     },
     "main": "src/cli.js",
     "scripts": {
@@ -43,7 +43,7 @@
         "typescript": "^4.1.3"
     },
     "dependencies": {
-        "dynamodb-onetable": "^0.7",
+        "dynamodb-onetable": "^1",
         "js-blend": "./src/paks/js-blend",
         "js-clone": "./src/paks/js-clone",
         "js-combine": "./src/paks/js-combine",
@@ -51,7 +51,7 @@
         "js-file": "./src/paks/js-file",
         "js-log": "./src/paks/js-log",
         "json5": "^2.2.0",
-        "onetable-migrate": "^0.7",
+        "onetable-migrate": "^1",
         "readline": "^1.3.0"
     },
     "files": [
