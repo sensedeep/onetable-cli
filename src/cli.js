@@ -105,10 +105,10 @@ class CLI {
         this.dry = ''
         this.bump = 'patch'
         this.aws = {}
-        this.args = this.parseArgs()
     }
 
     async init() {
+        this.args = await this.parseArgs()
         let config = await this.getConfig()
         if (!config.onetable) {
             error('Missing database configuration')
@@ -416,7 +416,7 @@ class CLI {
         }
     }
 
-    parseArgs() {
+    async parseArgs() {
         let argv = process.argv
         let i
         for (i = 2; i < argv.length; i++) {
@@ -455,7 +455,7 @@ class CLI {
             } else if (arg == '--verbose' || arg == '-v') {
                 this.verbosity = 1
             } else if (arg == '--version') {
-                this.printVersion()
+                await this.printVersion()
             } else if (arg[0] == '-' || arg.indexOf('-') >= 0) {
                 this.usage()
             } else {
