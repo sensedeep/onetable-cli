@@ -194,7 +194,7 @@ class CLI {
             } else if (cmd == 'outstanding') {
                 await this.outstanding()
             } else if (args.length) {
-                await this.move(args[0])
+                await this.move(args[1])
             } else {
                 this.usage()
             }
