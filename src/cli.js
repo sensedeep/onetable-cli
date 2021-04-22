@@ -166,11 +166,19 @@ class CLI {
         this.debug(`Importing schema from "${path}"`)
         try {
             let schema = (await import(path)).default
+            for (let [name, model] of Object.entries(schema.models)) {
+                for (let [key, field] of Object.entries(model)) {
+                    if (field.validate) {
+                        field.validate = field.validate.toString()
+                    }
+                }
+            }
             return schema
         } catch (err) {
             error(`Cannot load schema ${path}`, err)
         }
     }
+
     async command() {
         let args = this.args
         let scope = args[0]
