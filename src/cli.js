@@ -65,31 +65,32 @@ Generate:
   generate migration
 
 Migrations:
-  migrate 1.2.3                         # Apply migrations up or down to version 1.2.3
-  migrate all                           # Apply all outstanding migrations (upwards)
-  migrate down                          # Rervert the last applied migration
-  migrate generate                      # Generate a migration stub for the next patch version
-  migrate list                          # List all applied migrations
-  migrate outstanding                   # List migrations yet to be applied
-  migrate reset                         # Reset the database with latest migration
-  migrate status                        # Show most recently applied migration
-  migrate up                            # Apply the next migration
-  Options:
-    --aws-access-key                    # AWS access key
-    --aws-region                        # AWS service region
-    --aws-secret-key                    # AWS secret key
-    --bump [major,minor,patch]          # Version digit to bump in generation
-    --config migrate.js                 # Migration configuration file
-    --crypto cipher:password            # Crypto to use for encrypted attributes
-    --debug                             # Show debug trace
-    --dir directory                     # Change to directory to execute
-    --dry                               # Dry-run, don't execute
-    --endpoint http://host:port         # Database endpoint
-    --force                             # Force action without confirmation
-    --profile prod|qa|dev|...           # Select configuration profile
-    --quiet                             # Run as quietly as possible
-    --schema ./path/to/schema.js        # Database schema module
-    --version                           # Emit version number
+  migrate 1.2.3                     # Apply migrations up or down to version 1.2.3
+  migrate all                       # Apply all outstanding migrations (upwards)
+  migrate down                      # Rervert the last applied migration
+  migrate generate                  # Generate a migration stub for the next patch version
+  migrate list                      # List all applied migrations
+  migrate outstanding               # List migrations yet to be applied
+  migrate reset                     # Reset the database with latest migration
+  migrate status                    # Show most recently applied migration
+  migrate up                        # Apply the next migration
+
+Options:
+  --aws-access-key                  # AWS access key
+  --aws-region                      # AWS service region
+  --aws-secret-key                  # AWS secret key
+  --bump [major,minor,patch]        # Version digit to bump in generation
+  --config migrate.js               # Migration configuration file
+  --crypto cipher:password          # Crypto to use for encrypted attributes
+  --debug                           # Show debug trace
+  --dir directory                   # Change to directory to execute
+  --dry                             # Dry-run, don't execute
+  --endpoint http://host:port       # Database endpoint
+  --force                           # Force action without confirmation
+  --profile prod|qa|dev|...         # Select configuration profile
+  --quiet                           # Run as quietly as possible
+  --schema ./path/to/schema.js      # Database schema module
+  --version                         # Emit version number
 `
 
 const LATEST_VERSION = 'latest'
