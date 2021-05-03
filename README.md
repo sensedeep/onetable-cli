@@ -50,17 +50,25 @@ Then create a `migrate.json` with your DynamoDB OneTable configuration. We use J
 ```
 
 Set the `name` property to the name of your DynamoDB table. Set the `schema` property to point to your OneTable schema.
+The schema file should use `export default` to export the schema. In this manner, the same schema file can be used for your DynamoDB access layer and for the OneTable CLI. For example:
+
+```
+export default {
+    indexes: { },
+    models: {}
+}
+```
 
 If you need to have your migrations in a different directory, you can set `onetable.dir` to point to the directory containing the migrations themselves.
 
-Your configuration should match your OneTable configuration with respect to the OneTable `crypto`, `delimiter`, `nulls` and `typeField` settings.
+Your configuration should match your OneTable configuration with respect to the OneTable `crypto`, `delimiter`, `nulls` and `typeField` settings. If you have these set to non-default settings, add them to your migrate.json to match.
 
 Generate a stub migration
 
 Migrations are Javascript files that export the methods `up` and `down` to apply the migration and a `description` property.
 
 ```sh
-generate migration
+onetable generate migration
 ```
 
 This will create a `0.0.1.js` migration that contains the following. Edit the `up` and `down` methods and description to suit.
@@ -83,61 +91,61 @@ export default {
 Apply the next migration
 
 ```sh
-migrate up
+onetable migrate up
 ```
 
 Reverse the last migration
 
 ```sh
-migrate down
+onetable migrate down
 ```
 
 Migrate to a specific version (up or down)
 
 ```sh
-migrate 0.1.3
+onetable migrate 0.1.3
 ```
 
 Apply all outstanding migrations
 
 ```sh
-migrate all
+onetable migrate all
 ```
 
 Show the last applied migration
 
 ```sh
-migrate status
+onetable migrate status
 ```
 
 Show applied migrations
 
 ```sh
-migrate list
+onetable migrate list
 ```
 
 Show outstanding migrations not yet applied
 
 ```sh
-migrate outstanding
+onetable migrate outstanding
 ```
 
 Reset the database to the latest migration. This should the database and apply the `latest.js` migration. The purpose of the `latest` migration is to have one migration that can quickly create a new database with the latest schema without having to apply all historical migrations.
 
 ```sh
-migrate reset
+onetable migrate reset
 ```
 
 Generate a specific version migration
 
 ```sh
-migrate --bump 2.4.3 generate
+onetable migrate --bump 2.4.3 generate
 ```
 
 Do a dry run for a migration and not execute
 
 ```sh
-migrate --dry up
+onetable migrate --dry up
 ```
 
 ### Command Line Options
@@ -172,7 +180,7 @@ You can configure access to your DynamoDB table in your AWS account several ways
 Via command line option:
 
 ```
-migrate --aws-access-key key --aws-secret-key secret --aws-region us-east-1
+onetable migrate --aws-access-key key --aws-secret-key secret --aws-region us-east-1
 ```
 
 Via migrate.json
