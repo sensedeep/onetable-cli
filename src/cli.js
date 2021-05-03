@@ -62,17 +62,17 @@ onetable usage:
   onetable generate ...
 
 Generate:
-  generate migration
+  onetable generate migration       # Generate a stub migration file
 
 Migrations:
-  migrate 1.2.3                     # Apply migrations up or down to version 1.2.3
-  migrate all                       # Apply all outstanding migrations (upwards)
-  migrate down                      # Rervert the last applied migration
-  migrate list                      # List all applied migrations
-  migrate outstanding               # List migrations yet to be applied
-  migrate reset                     # Reset the database with latest migration
-  migrate status                    # Show most recently applied migration
-  migrate up                        # Apply the next migration
+  onetable migrate 1.2.3            # Apply migrations up or down to version 1.2.3
+  onetable migrate all              # Apply all outstanding migrations (upwards)
+  onetable migrate down             # Rervert the last applied migration
+  onetable migrate list             # List all applied migrations
+  onetable migrate outstanding      # List migrations yet to be applied
+  onetable migrate reset            # Reset the database with latest migration
+  onetable migrate status           # Show most recently applied migration
+  onetable migrate up               # Apply the next migration
 
 Options:
   --aws-access-key                  # AWS access key
@@ -131,12 +131,14 @@ class CLI {
         }
         cot.schema = await this.readSchema(cot.schema)
 
+        let location
         if (cot.arn) {
             this.verbose(`Accessing DynamoDb "${cot.name}" via proxy at ${cot.arn}`)
             this.migrate = new Proxy(config, this)
+            location = cot.arn
         } else {
             let endpoint = this.endpoint || cot.endpoint || cot.aws.endpoint || process.env.DB_ENDPOINT
-            let args, location
+            let args
             if (endpoint) {
                 args = { region: 'localhost', endpoint }
                 location = 'localhost'
@@ -154,6 +156,11 @@ class CLI {
 
             let onetable = new Table(cot)
             this.migrate = new Migrate(onetable, config)
+        }
+        try {
+            await this.migrate.getCurrentVersion()
+        } catch (err) {
+            error(`Cannot communicate with DynamoDB "${cot.name}" at "${location}"\n` + err.message)
         }
     }
 
