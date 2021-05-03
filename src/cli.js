@@ -68,7 +68,6 @@ Migrations:
   migrate 1.2.3                     # Apply migrations up or down to version 1.2.3
   migrate all                       # Apply all outstanding migrations (upwards)
   migrate down                      # Rervert the last applied migration
-  migrate generate                  # Generate a migration stub for the next patch version
   migrate list                      # List all applied migrations
   migrate outstanding               # List migrations yet to be applied
   migrate reset                     # Reset the database with latest migration
@@ -214,7 +213,7 @@ class CLI {
 
     async generateMigration() {
         let versions = await this.migrate.getOutstandingVersions()
-        let version = versions.length ? versions.pop() : this.migrate.getCurrentVersion()
+        let version = versions.length ? versions.pop() : await this.migrate.getCurrentVersion()
         version = Semver.inc(version, this.bump)
         let dir = Path.resolve(this.config.onetable.migrations || '.')
         let path = `${dir}/${version}.js`

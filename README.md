@@ -60,7 +60,7 @@ Generate a stub migration
 Migrations are Javascript files that export the methods `up` and `down` to apply the migration and a `description` property.
 
 ```sh
-migrate generate
+generate migration
 ```
 
 This will create a `0.0.1.js` migration that contains the following. Edit the `up` and `down` methods and description to suit.
