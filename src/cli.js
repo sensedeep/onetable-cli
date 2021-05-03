@@ -501,13 +501,15 @@ class CLI {
         if (!config.onetable) {
             config = {onetable: config}
         }
-        for (let path of config.onetable.config) {
-            if (Fs.existsSync(path)) {
-                this.debug(`Loading ${path}`)
-                let data = await File.readJson(path)
-                config = Blend(config, data)
-            } else {
-                error(`Cannot read ${path}`)
+        if (config.onetable.config) {
+            for (let path of config.onetable.config) {
+                if (Fs.existsSync(path)) {
+                    this.debug(`Loading ${path}`)
+                    let data = await File.readJson(path)
+                    config = Blend(config, data)
+                } else {
+                    error(`Cannot read ${path}`)
+                }
             }
         }
         if (profile && config.profiles) {

@@ -23,5 +23,5 @@
         "types": ["node", "jest"]
     },
     "compileOnSave": false,
-    "exclude": ["node_modules", "dist", "bin"]
+    "exclude": ["node_modules", "dist", "bin", "samples"]
 }
