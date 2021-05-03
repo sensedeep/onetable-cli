@@ -135,7 +135,7 @@ class CLI {
             this.verbose(`Accessing DynamoDb "${cot.name}" via proxy at ${cot.arn}`)
             this.migrate = new Proxy(config, this)
         } else {
-            let endpoint = this.endpoint || cot.endpoint || process.env.DB_ENDPOINT
+            let endpoint = this.endpoint || cot.endpoint || cot.aws.endpoint || process.env.DB_ENDPOINT
             let args, location
             if (endpoint) {
                 args = { region: 'localhost', endpoint }
