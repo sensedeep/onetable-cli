@@ -49,14 +49,14 @@ Then create a `migrate.json` with your DynamoDB OneTable configuration. We use J
 }
 ```
 
-Set the `name` property to the name of your DynamoDB table. Set the `schema` property to point to your OneTable schema in a `.mjs` JavaScript file. (yes the extension is `mjs`).
+Set the `name` property to the name of your DynamoDB table. Set the `schema` property to point to your OneTable schema in a `.mjs` JavaScript file. (yes the extension is mjs).
 
 The schema file should use `export default` to export the schema. In this manner, the same schema file can be used for your DynamoDB access layer and for the OneTable CLI. For example:
 
 ```
 export default {
     indexes: {
-        primary: { hash: 'pk', sort: 'sk' },    
+        primary: { hash: 'pk', sort: 'sk' },
     },
     models: {
         user: {
@@ -68,7 +68,7 @@ export default {
 }
 ```
 
-If you need to have your migrations in a different directory, you can set the `dir` property to point to the directory containing the migrations themselves.
+If you need to have your migrations in a different directory, you can set the migrate.json `dir` property to point to the directory containing the migrations themselves.
 
 Your configuration should match your OneTable configuration with respect to the OneTable `crypto`, `delimiter`, `nulls` and `typeField` settings. If you have these set to non-default settings, add them to your migrate.json to match.
 
