@@ -336,7 +336,10 @@ class ConsoleLogger {
 
                 } else {
                     console.log(`${time}: ${module}: ${type}: ${message}`)
-                    console.log(JSON.stringify(context, null, 4) + '\n')
+                    if (Object.keys(context).length > 4) {
+                        //  More than: message, time, level and type
+                        console.log(JSON.stringify(context, null, 4) + '\n')
+                    }
                 }
             } catch (err) {
                 console.log(`Exception in emitting log message: ${message}`)

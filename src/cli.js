@@ -114,7 +114,7 @@ class CLI {
             error('Missing database configuration')
         }
         this.config = config
-        this.debug(`Using configuration profile ${config.profile}`)
+        this.debug(`Using configuration profile "${config.profile}"`)
 
         this.log = new Log(config.log, {app: 'migrate', source: 'migrate'})
         if (this.verbosity) {
@@ -143,7 +143,7 @@ class CLI {
                 delete process.env.AWS_PROFILE
             } else {
                 args = cot.aws
-                if (Object.keys(args).length == 0) {
+                if (!args || Object.keys(args).length == 0) {
                     location = process.env.AWS_PROFILE
                 } else {
                     location = args.region
@@ -520,7 +520,7 @@ class CLI {
             config.profile = profile
         }
         this.profile = config.profile
-        config.onetable.aws = config.onetable.aws || this.aws
+        config.onetable.aws = config.onetable.aws || this.aws || {}
         return config
     }
 
