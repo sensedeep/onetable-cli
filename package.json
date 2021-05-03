@@ -1,6 +1,6 @@
 {
     "name": "onetable-cli",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "type": "module",
     "description": "DynamoDB OneTable CLI",
     "keywords": [
@@ -20,7 +20,7 @@
     },
     "main": "src/cli.js",
     "scripts": {
-        "build": "tsc",
+        "build": "tsc && ./fixup",
         "lint": "eslint .",
         "prepare": "npm run build"
     },

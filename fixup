@@ -1,0 +1,13 @@
+#!/bin/bash
+#
+#   Add package.json files src/paks
+#
+
+for d in dist/paks/*
+do
+cat >$d/package.json <<!EOF
+{
+    "type": "module"
+}
+!EOF
+done
