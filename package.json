@@ -1,6 +1,6 @@
 {
     "name": "onetable-cli",
-    "version": "1.0.6",
+    "version": "1.0.7",
     "type": "module",
     "description": "DynamoDB OneTable CLI",
     "keywords": [
