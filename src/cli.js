@@ -116,11 +116,13 @@ class CLI {
         this.config = config
         this.debug(`Using configuration profile "${config.profile}"`)
 
-        this.log = new Log(config.log, {app: 'migrate', source: 'migrate'})
+        this.log = new Log(config.log, {app: 'onetable', source: 'onetable'})
         if (this.verbosity) {
-            this.log.setLevels({migrate: this.verbosity + 4})
+            this.log.setLevels({
+                dynamo: this.verbosity + 4,
+                onetable: this.verbosity + 4,
+            })
         }
-
         /*
             OneTable expects the crypto to be defined under a "primary" property.
          */
@@ -153,6 +155,7 @@ class CLI {
             }
             this.verbose(`Accessing DynamoDb "${cot.name}" at "${location}"`)
             cot.client = new AWS.DynamoDB.DocumentClient(args)
+            cot.logger = this.logger.bind(this)
 
             let onetable = new Table(cot)
             this.migrate = new Migrate(onetable, config)
@@ -540,6 +543,12 @@ class CLI {
     debug(...args) {
         if (this.verbosity >= DebugVerbosity) {
             print(...args)
+        }
+    }
+
+    logger(type, message, context) {
+        if (this.verbosity) {
+            this.log.submit(type, message, context)
         }
     }
 
