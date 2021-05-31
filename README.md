@@ -21,10 +21,11 @@ The OneTable CLI was used in production by the [SenseDeep Serverless Troubleshoo
 * Operate on local databases, remote databases via AWS credentials and via Lambda proxy.
 * Add and remove seed data in any migration.
 * Quick reset of DynamoDB databases for development.
+* Generate migration scripts.
 * Show database status and list applied migrations.
 * Show outstanding migrations.
 * Stored history of migrations.
-* No module dependencies other than OneTable.
+* Minimal dependencies.
 
 ## Installation
 
