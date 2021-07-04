@@ -17,8 +17,13 @@
             name: 'dev-database',
             endpoint: 'http://localhost:8000'
         },
+        qa: {
+            name: 'qa-database',
+            arn: 'migrate-qa-invoke',
+        },
         prod: {
             name: 'prod-database',
+            arn: 'arn:aws:lambda:us-east-1:505157862053:function:migrate-prod-invoke',
             aws: {
                 accessKeyId: 'access-key',
                 secretAccessKey: 'secret-key',
