@@ -29,6 +29,8 @@ The OneTable CLI was used in production by the [SenseDeep Serverless Troubleshoo
 
 ## Installation
 
+NOTE: this package requires NPM version 7.0 or later. The version 6.x of NPM that comes with Node v14 will not work as it does not support local packages.
+
 ```sh
 npm i onetable-cli -g
 ```
