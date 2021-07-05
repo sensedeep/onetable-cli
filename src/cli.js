@@ -39,6 +39,7 @@ import Log from 'js-log'
 
 const MigrationTemplate = `
 export default {
+    version: 'VERSION',
     description: 'Purpose of this migration',
     async up(db, migrate) {
         // await db.create('Model', {})
@@ -113,7 +114,7 @@ class CLI {
         if (!config.onetable) {
             error('Missing database configuration')
         }
-        this.config = config
+        this.config = config || 'default'
         this.debug(`Using configuration profile "${config.profile}"`)
 
         this.log = new Log(config.log, {app: 'onetable', source: 'onetable'})
@@ -230,7 +231,8 @@ class CLI {
         if (Fs.existsSync(path)) {
             error(`Migration ${path} already exists`)
         } else {
-            await File.writeFile(path, MigrationTemplate)
+            let data = MigrationTemplate.replace('VERSION', version)
+            await File.writeFile(path, data)
             print(`Generated ${path}`)
         }
     }
@@ -293,7 +295,7 @@ class CLI {
             if (pastMigrations.length == 0) {
                 print('No migrations applied')
             } else {
-                print('Date                   Version   Description')
+                print('Date                  Version   Description')
             }
             for (let m of pastMigrations) {
                 let date = Dates.format(m.time, 'HH:MM:ss mmm d, yyyy')
