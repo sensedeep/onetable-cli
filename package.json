@@ -43,7 +43,7 @@
     },
     "dependencies": {
         "aws-sdk": "^2.939.0",
-        "dynamodb-onetable": "^1.5.2",
+        "dynamodb-onetable": "^1.5.3",
         "js-blend": "./src/paks/js-blend",
         "js-clone": "./src/paks/js-clone",
         "js-combine": "./src/paks/js-combine",
