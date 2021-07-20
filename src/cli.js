@@ -542,17 +542,13 @@ class Proxy {
     }
 
     async invoke(action, args) {
-        let cfg = Object.assign({}, this.config)
-        cfg.crypto = this.crypto
-        let params = {
-            action: action,
-            config: this.config,
-        }
+        let params = {action}
         if (args) {
             params.args = args
         }
-        let payload = JSON.stringify(params, null, 2)
         this.debug(`Invoke migrate proxy`, {action, args, arn: this.arn})
+
+        let payload = JSON.stringify(params, null, 2)
 
         let result = await this.lambda.invoke({
             InvocationType: 'RequestResponse',
