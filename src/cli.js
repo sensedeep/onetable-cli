@@ -194,8 +194,6 @@ class CLI {
         if (scope == 'generate') {
             if (cmd == 'migration') {
                 await this.generateMigration()
-            } else if (cmd == 'types') {
-                await this.generateTypes()
             } else {
                 this.usage()
             }
@@ -243,40 +241,6 @@ class CLI {
             indexed[index.sort] = true
         }
         return indexed
-    }
-
-    //  Now that OneTable dynamically generate declarations, this is not typically needed.
-    async generateTypes(options = {}) {
-        let schema = this.config.onetable.schema
-        let indexed = this.getIndexed()
-        let out = []
-        let dir = Path.resolve(this.config.onetable.types || '.')
-        let path = `${dir}/Models.d.ts`
-        for (let [name, model] of Object.entries(schema.models)) {
-            out.push(`export type ${name} = {`)
-            let defs = []
-            for (let [prop, field] of Object.entries(model)) {
-                if (field.hidden || indexed[prop]) {
-                    if (options.hidden != true) {
-                        continue
-                    }
-                }
-                let sep = field.required ? ':' : '?:'
-                let type = (typeof field.type == 'function') ? field.type.name : field.type
-
-                if (type == 'Array') {
-                    defs.push(`${prop}: any[];`)
-
-                } else if (type == 'Object') {
-                    defs.push(`${prop}${sep} object;`)
-
-                } else {
-                    defs.push(`${prop}${sep} ${Types[type] || type};`)
-                }
-            }
-            out.push('    ' + defs.join('\n    ') + '\n}\n')
-        }
-        await File.writeFile(path, out.join('\n') + '\n')
     }
 
     async status() {
