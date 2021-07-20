@@ -35,7 +35,7 @@ import {Migrate} from 'onetable-migrate'
 import Blend from 'js-blend'
 import Dates from 'js-dates'
 import File from 'js-file'
-import Log from 'js-log'
+import SenseLogs from 'senselogs'
 
 const MigrationTemplate = `
 export default {
@@ -94,7 +94,6 @@ Options:
 `
 
 const LATEST_VERSION = 'latest'
-const DebugVerbosity = 10
 
 class CLI {
     usage() {
@@ -102,7 +101,7 @@ class CLI {
     }
 
     constructor() {
-        this.verbosity = 0
+        this.verbosity = false
         this.dry = ''
         this.bump = 'patch'
         this.aws = {}
@@ -117,13 +116,8 @@ class CLI {
         this.config = config || 'default'
         this.debug(`Using configuration profile "${config.profile}"`)
 
-        this.log = new Log(config.log, {app: 'onetable', source: 'onetable'})
-        if (this.verbosity) {
-            this.log.setLevels({
-                dynamo: this.verbosity + 4,
-                onetable: this.verbosity + 4,
-            })
-        }
+        this.log = new SenseLogs(config.log)
+
         /*
             OneTable expects the crypto to be defined under a "primary" property.
          */
@@ -139,6 +133,7 @@ class CLI {
             this.verbose(`Accessing DynamoDb "${cot.name}" via proxy at ${cot.arn}`)
             this.migrate = new Proxy(config, this)
             location = cot.arn
+
         } else {
             let endpoint = this.endpoint || cot.endpoint || cot.aws.endpoint || process.env.DB_ENDPOINT
             let args
@@ -156,10 +151,13 @@ class CLI {
             }
             this.verbose(`Accessing DynamoDb "${cot.name}" at "${location}"`)
             cot.client = new AWS.DynamoDB.DocumentClient(args)
-            cot.logger = this.logger.bind(this)
+            cot.senselogs = this.log
 
             let onetable = new Table(cot)
-            this.migrate = new Migrate(onetable, config)
+            this.migrate = new Migrate(onetable, {
+                migrations: config.migrations,
+                dir: config.dir,
+            })
         }
         try {
             await this.migrate.getCurrentVersion()
@@ -455,7 +453,7 @@ class CLI {
                 let {cipher, password} = argv[++i]
                 this.crypto = { primary: { cipher, password }}
             } else if (arg == '--debug') {
-                this.verbosity = DebugVerbosity
+                this.verbosity = 2
             } else if (arg == '--dir' || arg == '-d') {
                 process.chdir(argv[++i])
             } else if (arg == '--dry') {
@@ -473,7 +471,7 @@ class CLI {
             } else if (arg == '--schema' || arg == '-s') {
                 this.schema = argv[++i]
             } else if (arg == '--verbose' || arg == '-v') {
-                this.verbosity = 1
+                this.verbosity = true
             } else if (arg == '--version') {
                 await this.printVersion()
             } else if (arg[0] == '-' || arg.indexOf('-') >= 0) {
@@ -495,9 +493,6 @@ class CLI {
         if (!Fs.existsSync(migrateConfig)) {
             error(`Cannot locate ${migrateConfig}`)
         }
-        /*
-            Determine the stage profile. Priority: command line, migrate.json, package.json, PROFILE env
-         */
         let index, profile
         if ((index = process.argv.indexOf('--profile')) >= 0) {
             profile = process.argv[index + 1]
@@ -533,6 +528,7 @@ class CLI {
         }
         this.profile = config.profile
         config.onetable.aws = config.onetable.aws || this.aws || {}
+        config.log.name = 'onetable-cli'
         return config
     }
 
@@ -543,14 +539,8 @@ class CLI {
     }
 
     debug(...args) {
-        if (this.verbosity >= DebugVerbosity) {
+        if (this.verbosity > 1) {
             print(...args)
-        }
-    }
-
-    logger(type, message, context) {
-        if (this.verbosity) {
-            this.log.submit(type, message, context)
         }
     }
 
