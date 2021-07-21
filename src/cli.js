@@ -116,7 +116,7 @@ class CLI {
         this.config = config || 'default'
         this.debug(`Using configuration profile "${config.profile}"`)
 
-        this.log = new SenseLogs(config.log)
+        this.log = new SenseLogs({name: 'onetable', destination: 'console'})
 
         /*
             OneTable expects the crypto to be defined under a "primary" property.
@@ -492,7 +492,6 @@ class CLI {
         }
         this.profile = config.profile
         config.onetable.aws = config.onetable.aws || this.aws || {}
-        config.log.name = 'onetable-cli'
         return config
     }
 

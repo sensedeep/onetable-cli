@@ -80,6 +80,7 @@ Generate a stub migration
 Migrations are Javascript files that export the methods `up` and `down` to apply the migration and a `description` property.
 
 ```sh
+cd ./migrations
 onetable generate migration
 ```
 
