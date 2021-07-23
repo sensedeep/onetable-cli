@@ -143,7 +143,7 @@ Show outstanding migrations not yet applied
 onetable migrate outstanding
 ```
 
-Reset the database to the latest migration. This should the database and apply the `latest.js` migration. The purpose of the `latest` migration is to have one migration that can quickly create a new database with the latest schema without having to apply all historical migrations.
+Reset the database to the latest migration. This should reset the database and apply the `latest.js` migration. The purpose of the `latest` migration is to have one migration that can quickly create a new database with the latest schema without having to apply all historical migrations.
 
 ```sh
 onetable migrate reset

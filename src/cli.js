@@ -31,6 +31,7 @@ import AWS from 'aws-sdk'
 
 import {Table} from 'dynamodb-onetable'
 import {Migrate} from 'onetable-migrate'
+// import {Migrate} from './onetable-migrate/dist/mjs/index.js'
 
 import Blend from 'js-blend'
 import Dates from 'js-dates'
