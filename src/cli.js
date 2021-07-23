@@ -173,7 +173,8 @@ class CLI {
         }
         this.debug(`Importing schema from "${path}"`)
         try {
-            let schema = (await import('file:///' + path)).default
+            let imported = await import('file:///' + path)
+            let schema = imported.Schema || imported.default
             for (let [name, model] of Object.entries(schema.models)) {
                 for (let [key, field] of Object.entries(model)) {
                     if (field.validate) {
