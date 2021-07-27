@@ -4,7 +4,7 @@
 
     Usage:
     Migrations:
-        onetable migrate [all, down, list, outstanding, reset, status, up, N.N.N]
+        onetable migrate [all, down, list, outstanding, repeat, reset, status, up, N.N.N]
         onetable generate [migration]
 
     Reads migrate.json:
@@ -72,6 +72,7 @@ Migrations:
   onetable migrate down             # Rervert the last applied migration
   onetable migrate list             # List all applied migrations
   onetable migrate outstanding      # List migrations yet to be applied
+  onetable migrate repeat           # Repeat the last migration
   onetable migrate reset            # Reset the database with latest migration
   onetable migrate status           # Show most recently applied migration
   onetable migrate up               # Apply the next migration
@@ -158,6 +159,7 @@ class CLI {
             this.migrate = new Migrate(onetable, {
                 migrations: config.migrations,
                 dir: config.dir,
+                profile: config.profile,
             })
         }
         try {
@@ -259,7 +261,7 @@ class CLI {
             if (pastMigrations.length == 0) {
                 print('No migrations applied')
             } else {
-                print('Date                  Version   Description')
+                print('Date                   Version   Description')
             }
             for (let m of pastMigrations) {
                 let date = Dates.format(m.time, 'HH:MM:ss mmm d, yyyy')
@@ -303,6 +305,13 @@ class CLI {
             pastMigrations = []
             versions = [LATEST_VERSION]
 
+        } else if (target == 'repeat') {
+            direction = 2
+            let version = pastMigrations.reverse().slice(0).map(m => m.version).shift()
+            if (version) {
+                versions = [version]
+            }
+
         } else if (target == 'up') {
             direction = 1
             if (outstanding.length == 0) {
@@ -344,12 +353,13 @@ class CLI {
         try {
             await this.confirm(versions, direction)
             for (let version of versions) {
-                let verb = ['Downgrade from', 'Reset to', 'Upgrade to'][direction + 1]
+                let verb = ['Downgrade from', 'Reset to', 'Upgrade to', 'Repeat'][direction + 1]
                 let migration = await this.migrate.apply(direction, version)
                 print(`${verb} "${migration.version} - ${migration.description}"`)
             }
             current = await this.migrate.getCurrentVersion()
             print(`\nCurrent database version: ${current}`)
+
         } catch (err) {
             error('Migration failed', err.message, err.details)
         }
@@ -359,7 +369,7 @@ class CLI {
         if (this.force) {
             return
         }
-        let action = ['downgrade', 'reset', 'upgrade'][direction + 1]
+        let action = ['downgrade', 'reset', 'upgrade', 'repeat'][direction + 1]
         let noun = versions.length > 1 ? 'changes' : 'change'
         let fromto = action == 'downgrade' ? 'from' : 'to'
         let target = versions[versions.length - 1]

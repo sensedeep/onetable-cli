@@ -113,6 +113,12 @@ Reverse the last migration
 onetable migrate down
 ```
 
+Repeat the last migration
+
+```sh
+onetable migrate repeat
+```
+
 Migrate to a specific version (up or down)
 
 ```sh
