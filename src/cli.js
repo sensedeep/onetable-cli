@@ -261,11 +261,11 @@ class CLI {
             if (pastMigrations.length == 0) {
                 print('No migrations applied')
             } else {
-                print('Date                   Version   Description')
+                print('Date                  Version   Description')
             }
             for (let m of pastMigrations) {
                 let date = Dates.format(m.time, 'HH:MM:ss mmm d, yyyy')
-                print(`${date}  ${m.version}     ${m.description}`)
+                print(`${date}  ${m.version.padStart(7)}   ${m.description}`)
             }
         }
     }
