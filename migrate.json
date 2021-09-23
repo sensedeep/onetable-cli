@@ -2,27 +2,26 @@
     Sample migrate.json with all possible properties
  */
 {
-    crypto: {
-        cipher: 'aes-256-gcm',
-        password: 'your-secret-encryption-password'
-    },
-    delimiter: ':',
+    onetable: {
+        crypto: {
+            cipher: 'aes-256-gcm',
+            password: 'your-secret-encryption-password'
+        },
+        delimiter: ':',
+        hidden: true,
+        name: 'mydb',
+        nulls: false,
+        typeField: '_type',
+    }
     dir: '.',
-    hidden: true,
-    nulls: false,
-    typeField: '_type',
-    schema: './schema.js',
     profiles: {
         dev: {
-            name: 'dev-database',
             endpoint: 'http://localhost:8000'
         },
         qa: {
-            name: 'qa-database',
             arn: 'migrate-qa-invoke',
         },
         prod: {
-            name: 'prod-database',
             arn: 'arn:aws:lambda:us-east-1:505157862053:function:migrate-prod-invoke',
             aws: {
                 accessKeyId: 'access-key',

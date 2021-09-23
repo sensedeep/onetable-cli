@@ -47,33 +47,18 @@ Then create a `migrate.json` with your DynamoDB OneTable configuration. We use J
 
 ```javascript
 {
-    name: 'your-dynamo-table',
-    schema: 'schema.mjs',
-}
-```
-
-Set the `name` property to the name of your DynamoDB table. Set the `schema` property to point to your OneTable schema in a `.mjs` JavaScript file. (yes the extension is mjs).
-
-The schema file should use `export default` to export the schema. In this manner, the same schema file can be used for your DynamoDB access layer and for the OneTable CLI. For example:
-
-```
-export default {
-    indexes: {
-        primary: { hash: 'pk', sort: 'sk' },
-    },
-    models: {
-        user: {
-            pk: { type: String, value: 'user:${email}' },
-            sk: { type: String, value: 'user:' },
-            email: { type: String },
-        }
+    onetable: {
+        name: 'your-dynamo-table',
+        //  Other onetable configuration parameters.
     }
 }
 ```
 
+Set the `name` property to the name of your DynamoDB table.
+
 If you need to have your migrations in a different directory, you can set the migrate.json `dir` property to point to the directory containing the migrations themselves.
 
-Your configuration should match your OneTable configuration with respect to the OneTable `crypto`, `delimiter`, `nulls` and `typeField` settings. If you have these set to non-default settings, add them to your migrate.json to match.
+You pass your OneTable configuration via the `onetable` collection. Ensure your `crypto`, `delimiter`, `nulls` and `typeField` settings match your deployed code. If you have these set to non-default settings in your code, add them to your migrate.json `onetable` map to match.
 
 Generate a stub migration
 
@@ -89,7 +74,9 @@ The `db` property is the OneTable `Table` instance. This `migrate` property is a
 
 ```javascript
 export default {
+    version: '0.0.1',
     description: 'Purpose of this migration',
+    schema: Schema,
     async up(db, migrate) {
         // await db.create('Model', {})
     },
@@ -104,67 +91,67 @@ export default {
 Apply the next migration
 
 ```sh
-onetable migrate up
+onetable up
 ```
 
 Reverse the last migration
 
 ```sh
-onetable migrate down
+onetable down
 ```
 
 Repeat the last migration
 
 ```sh
-onetable migrate repeat
+onetable repeat
 ```
 
 Migrate to a specific version (up or down)
 
 ```sh
-onetable migrate 0.1.3
+onetable 0.1.3
 ```
 
 Apply all outstanding migrations
 
 ```sh
-onetable migrate all
+onetable all
 ```
 
 Show the last applied migration
 
 ```sh
-onetable migrate status
+onetable status
 ```
 
 Show applied migrations
 
 ```sh
-onetable migrate list
+onetable list
 ```
 
 Show outstanding migrations not yet applied
 
 ```sh
-onetable migrate outstanding
+onetable outstanding
 ```
 
 Reset the database to the latest migration. This should reset the database and apply the `latest.js` migration. The purpose of the `latest` migration is to have one migration that can quickly create a new database with the latest schema without having to apply all historical migrations.
 
 ```sh
-onetable migrate reset
+onetable reset
 ```
 
 Generate a specific version migration
 
 ```sh
-onetable migrate --bump 2.4.3 generate
+onetable --bump 2.4.3 generate
 ```
 
 Do a dry run for a migration and not execute
 
 ```sh
-onetable migrate --dry up
+onetable --dry up
 ```
 
 ### Command Line Options
@@ -182,7 +169,6 @@ onetable migrate --dry up
 --force                             # Force action without confirmation
 --profile prod|qa|dev|...           # Select configuration profile
 --quiet                             # Run as quietly as possible
---schema ./path/to/schema.js        # Database schema module
 --version                           # Emit version number
 ```
 
@@ -199,7 +185,7 @@ You can configure access to your DynamoDB table in your AWS account several ways
 Via command line option:
 
 ```
-onetable migrate --aws-access-key key --aws-secret-key secret --aws-region us-east-1
+onetable --aws-access-key key --aws-secret-key secret --aws-region us-east-1
 ```
 
 Via migrate.json
@@ -263,10 +249,13 @@ The latest migration should remove all data from the database and then initializ
 
 When creating your `latest.js` migration, be very careful when removing all items from the database. We typically protect this with a test against the deployment profile to ensure you never do this on a production database.
 
-Sample latest.js migration
+Sample latest.js migration:
+
 ```javascript
 export default {
+    version: '0.0.1',
     description: 'Database reset to latest version',
+    schema: Schema,
     async up(db, migrate) {
         if (migrate.params.profile == 'dev') {
             await removeAllItems(db)
