@@ -112,44 +112,43 @@ class CLI {
         this.config = config || 'default'
         this.debug(`Using configuration profile "${config.profile}"`)
 
-        this.log = new SenseLogs({name: 'onetable', destination: 'console'})
+        this.log = new SenseLogs({name: 'onetable', destination: 'console', format: 'human'})
 
         /*
             OneTable expects the crypto to be defined under a "primary" property.
          */
-        let cot = config.onetable
-        let crypto = this.crypto || cot.crypto || config.crypto
+        let onetable = config.onetable
+        let crypto = this.crypto || onetable.crypto || config.crypto
         if (crypto) {
-            cot.crypto = crypto.primary ? crypto : {primary: crypto}
+            onetable.crypto = crypto.primary ? crypto : {primary: crypto}
         }
-        cot.schema = await this.readSchema(cot.schema)
 
         let location
-        if (cot.arn) {
-            this.verbose(`Accessing DynamoDb "${cot.name}" via proxy at ${cot.arn}`)
-            this.migrate = new Proxy(config, this)
-            location = cot.arn
+        if (config.arn) {
+            this.verbose(`Accessing DynamoDb "${onetable.name}" via proxy at ${config.arn}`)
+            this.migrate = new Proxy(config.onetable, config.arn, config.aws, this)
+            location = config.arn
 
         } else {
-            let endpoint = this.endpoint || cot.endpoint || cot.aws.endpoint || process.env.DB_ENDPOINT
+            let endpoint = this.endpoint || config.endpoint ||
+                config.aws.endpoint || process.env.DB_ENDPOINT
             let args
             if (endpoint) {
                 args = { region: 'localhost', endpoint }
                 location = 'localhost'
                 delete process.env.AWS_PROFILE
             } else {
-                args = cot.aws
+                args = config.aws
                 if (!args || Object.keys(args).length == 0) {
                     location = process.env.AWS_PROFILE
                 } else {
                     location = args.region
                 }
             }
-            this.verbose(`Accessing DynamoDb "${cot.name}" at "${location}"`)
-            cot.client = new AWS.DynamoDB.DocumentClient(args)
-            cot.senselogs = this.log
+            this.verbose(`Accessing DynamoDb "${onetable.name}" at "${location}"`)
+            onetable.client = new AWS.DynamoDB.DocumentClient(args)
+            onetable.senselogs = this.log
 
-            let onetable = new Table(cot)
             this.migrate = new Migrate(onetable, {
                 migrations: config.migrations,
                 dir: config.dir,
@@ -468,38 +467,44 @@ class CLI {
         if ((index = process.argv.indexOf('--profile')) >= 0) {
             profile = process.argv[index + 1]
         }
-        let config = await File.readJson(migrateConfig)
+        let cfg = await File.readJson(migrateConfig)
 
-        profile = profile || config.profile || process.env.PROFILE
+        profile = profile || cfg.profile || process.env.PROFILE
 
-        if (profile && config.profiles) {
-            Blend(config, config.profiles[profile])
-            delete config.profiles
+        if (profile && cfg.profiles) {
+            Blend(cfg, cfg.profiles[profile])
+            delete cfg.profiles
         }
-        if (!config.onetable) {
-            config = {onetable: config}
+        if (!cfg.onetable) {
+            cfg = {onetable: cfg}
         }
-        if (config.onetable.config) {
-            for (let path of config.onetable.config) {
+        //  LEGACY OneTable params used to be top level
+        if (cfg.name) {
+            cfg.onetable = cfg.onetable || {}
+            cfg.onetable.name = cfg.onetable.name || cfg.name
+        }
+        if (cfg.config) {
+            for (let path of cfg.config) {
                 if (Fs.existsSync(path)) {
                     this.debug(`Loading ${path}`)
                     let data = await File.readJson(path)
-                    config = Blend(config, data)
+                    cfg = Blend(cfg, data)
                 } else {
                     error(`Cannot read ${path}`)
                 }
             }
         }
-        if (profile && config.profiles) {
-            Blend(config, config.profiles[profile])
-            delete config.profiles
+        delete cfg.config
+        if (profile && cfg.profiles) {
+            Blend(cfg, cfg.profiles[profile])
+            delete cfg.profiles
         }
         if (profile) {
-            config.profile = profile
+            cfg.profile = profile
         }
-        this.profile = config.profile
-        config.onetable.aws = config.onetable.aws || this.aws || {}
-        return config
+        this.profile = cfg.profile
+        cfg.aws = cfg.aws || this.aws || {}
+        return cfg
     }
 
     verbose(...args) {
@@ -523,12 +528,11 @@ class CLI {
 }
 
 class Proxy {
-    constructor(config, cli) {
-        this.config = config
+    constructor(config, arn, aws, cli) {
         this.cli = cli
-        let args = config.onetable.aws
-        this.arn = config.onetable.arn
-        this.lambda = new AWS.Lambda(args)
+        this.arn = arn
+        this.config = config
+        this.lambda = new AWS.Lambda(aws)
     }
 
     async apply(direction, version) {
@@ -548,7 +552,7 @@ class Proxy {
     }
 
     async invoke(action, args) {
-        let params = {action}
+        let params = {action, config: this.config}
         if (args) {
             params.args = args
         }
@@ -591,7 +595,6 @@ async function main() {
         await cli.init()
         await cli.command()
     } catch (err) {
-        print(err)
         error(err.message)
         throw err
     }
