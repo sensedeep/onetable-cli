@@ -16,7 +16,6 @@
         hidden: false,
         name: 'table-name',
         nulls: false,
-        schema: 'path/to/schema.js',
         typeField: 'type',
         aws: {accessKeyId, secretAccessKey, region},
         arn: 'lambda-arn'
@@ -85,7 +84,6 @@ Options:
   --force                           # Force action without confirmation
   --profile prod|qa|dev|...         # Select configuration profile
   --quiet                           # Run as quietly as possible
-  --schema ./path/to/schema.js      # Database schema module
   --version                         # Emit version number
 `
 
@@ -158,29 +156,7 @@ class CLI {
         try {
             await this.migrate.getCurrentVersion()
         } catch (err) {
-            error(`Cannot communicate with DynamoDB "${cot.name}" at "${location}"\n` + err.message)
-        }
-    }
-
-    async readSchema(path) {
-        path = Path.resolve(process.cwd(), this.schema || path || './schema.json')
-        if (!Fs.existsSync(path)) {
-            error(`Cannot find schema definition in "${path}"`)
-        }
-        this.debug(`Importing schema from "${path}"`)
-        try {
-            let imported = await import('file:///' + path)
-            let schema = imported.Schema || imported.default
-            for (let [name, model] of Object.entries(schema.models)) {
-                for (let [key, field] of Object.entries(model)) {
-                    if (field.validate) {
-                        field.validate = field.validate.toString()
-                    }
-                }
-            }
-            return schema
-        } catch (err) {
-            error(`Cannot load schema ${path}`, err)
+            error(`Cannot communicate with DynamoDB "${onetable.name}" at "${location}"\n` + err.message)
         }
     }
 
@@ -229,16 +205,6 @@ class CLI {
             await File.writeFile(path, data)
             print(`Generated ${path}`)
         }
-    }
-
-    getIndexed() {
-        let schema = this.config.onetable.schema
-        let indexed = {}
-        for (let index of Object.values(schema.indexes)) {
-            indexed[index.hash] = true
-            indexed[index.sort] = true
-        }
-        return indexed
     }
 
     async status() {
@@ -438,8 +404,6 @@ class CLI {
                 this.profile = argv[++i]
             } else if (arg == '--quiet' || arg == '-q') {
                 this.quiet = true
-            } else if (arg == '--schema' || arg == '-s') {
-                this.schema = argv[++i]
             } else if (arg == '--verbose' || arg == '-v') {
                 this.verbosity = true
             } else if (arg == '--version') {
