@@ -4,8 +4,7 @@
 
     Usage:
     Migrations:
-        onetable migrate [all, down, list, outstanding, repeat, reset, status, up, N.N.N]
-        onetable generate [migration]
+        onetable [all, down, generate, list, outstanding, repeat, reset, status, up, N.N.N]
 
     Reads migrate.json:
         crypto: {
@@ -60,22 +59,17 @@ const Types = {
 const Usage = `
 onetable usage:
 
-  onetable migrate ...
-  onetable generate ...
-
-Generate:
-  onetable generate migration       # Generate a stub migration file
-
 Migrations:
-  onetable migrate 1.2.3            # Apply migrations up or down to version 1.2.3
-  onetable migrate all              # Apply all outstanding migrations (upwards)
-  onetable migrate down             # Rervert the last applied migration
-  onetable migrate list             # List all applied migrations
-  onetable migrate outstanding      # List migrations yet to be applied
-  onetable migrate repeat           # Repeat the last migration
-  onetable migrate reset            # Reset the database with latest migration
-  onetable migrate status           # Show most recently applied migration
-  onetable migrate up               # Apply the next migration
+  onetable 1.2.3            # Apply migrations up or down to version 1.2.3
+  onetable all              # Apply all outstanding migrations (upwards)
+  onetable down             # Rervert the last applied migration
+  onetable generate         # Generate a stub migration file
+  onetable list             # List all applied migrations
+  onetable outstanding      # List migrations yet to be applied
+  onetable repeat           # Repeat the last migration
+  onetable reset            # Reset the database with latest migration
+  onetable status           # Show most recently applied migration
+  onetable up               # Apply the next migration
 
 Options:
   --aws-access-key                  # AWS access key
@@ -195,12 +189,13 @@ class CLI {
         let args = this.args
         let scope = args[0]
         let cmd = args[1]
+        if (scope != 'migrate' && scope != 'generate') {
+            cmd = scope
+            scope = 'migrate'
+        }
         if (scope == 'generate') {
-            if (cmd == 'migration') {
-                await this.generateMigration()
-            } else {
-                this.usage()
-            }
+            await this.generateMigration()
+
         } else if (scope == 'migrate') {
             if (cmd == 'all') {
                 await this.move()
@@ -213,7 +208,7 @@ class CLI {
             } else if (cmd == 'outstanding') {
                 await this.outstanding()
             } else if (args.length) {
-                await this.move(args[1])
+                await this.move(cmd)
             } else {
                 this.usage()
             }
