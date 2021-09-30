@@ -172,7 +172,6 @@ onetable --dry up
 --version                           # Emit version number
 ```
 
-
 ### Accessing AWS
 
 You can configure access to your DynamoDB table in your AWS account several ways:
@@ -277,6 +276,36 @@ async function removeAllItems(db) {
     } while (items.length)
 }
 ```
+
+### Profiles
+
+You can use profiles in your `migrate.json` to have specific configuration for different build profiles.
+
+Profiles are implemented by copying the properties from the relevant `profile.NAME` collection to the top level. For example:
+
+Here is a sample migrate.json with profiles:
+
+```javascript
+{
+    profiles: {
+        dev: {
+            dir: './migrations',
+            name: 'sensedb',
+            endpoint: 'http://localhost:8000'
+        },
+        qa: {
+            name: 'sensedb',
+            arn: 'arn:aws:lambda:us-east-1:xxxx:function:migrate-qa-invoke'
+        },
+        prod: {
+            name: 'sensedb',
+            arn: 'arn:aws:lambda:us-east-1:xxxx:function:migrate-prod-invoke'
+        }
+    }
+}
+```
+
+If the profile is set to 'dev', the dev profile properties of `dir`, `name`, and `endpoint` are copied to the root level.
 
 ### References
 
