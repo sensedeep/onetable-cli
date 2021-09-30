@@ -62,7 +62,7 @@ You pass your OneTable configuration via the `onetable` collection. Ensure your 
 
 Generate a stub migration
 
-Migrations are Javascript files that export the methods `up` and `down` to apply the migration and a `description` property.
+Migrations are Javascript files that export the methods `up` and `down` to apply the migration and a `description` property. The migration must nominate a version and provide the OneTable schema that applies for the table data at this version level.
 
 ```sh
 cd ./migrations
@@ -70,6 +70,7 @@ onetable generate migration
 ```
 
 This will create a `0.0.1.js` migration that contains the following. Edit the `up` and `down` methods and description to suit.
+
 The `db` property is the OneTable `Table` instance. This `migrate` property is an instance of the CLI Migrate class.
 
 ```javascript
