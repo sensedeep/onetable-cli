@@ -29,12 +29,17 @@ import AWS from 'aws-sdk'
 
 import {Table} from 'dynamodb-onetable'
 import {Migrate} from 'onetable-migrate'
-// import {Migrate} from './onetable-migrate/dist/mjs/index.js'
+
+//  DEV
+//  import {Table} from '../../onetable/dist/mjs/index.js'
+//  import {Migrate} from '../../onetable-migrate/dist/mjs/index.js'
 
 import Blend from 'js-blend'
 import Dates from 'js-dates'
 import File from 'js-file'
 import SenseLogs from 'senselogs'
+
+//  import SenseLogs from '../../senselogs/dist/mjs/index.js'
 
 const MigrationTemplate = `
 export default {
@@ -321,6 +326,7 @@ class CLI {
             print(`\nCurrent database version: ${current}`)
 
         } catch (err) {
+            console.log(err)
             error('Migration failed', err.message, err.details)
         }
     }
@@ -438,14 +444,6 @@ class CLI {
         if (profile && cfg.profiles) {
             Blend(cfg, cfg.profiles[profile])
             delete cfg.profiles
-        }
-        if (!cfg.onetable) {
-            cfg = {onetable: cfg}
-        }
-        //  LEGACY OneTable params used to be top level
-        if (cfg.name) {
-            cfg.onetable = cfg.onetable || {}
-            cfg.onetable.name = cfg.onetable.name || cfg.name
         }
         if (cfg.config) {
             for (let path of cfg.config) {

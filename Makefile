@@ -13,4 +13,5 @@ install: build
 
 update:
 	npm update dynamodb-onetable
+	npm update onetable-migrate
 	npm i --package-lock-only
