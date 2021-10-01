@@ -133,12 +133,11 @@ class CLI {
             location = config.arn
 
         } else {
-            let endpoint = this.endpoint || config.endpoint ||
-                config.aws.endpoint || process.env.DB_ENDPOINT
+            let endpoint = this.endpoint || config.endpoint || config.aws.endpoint || process.env.DB_ENDPOINT
             let args
             if (endpoint) {
-                args = { region: 'localhost', endpoint }
-                location = 'localhost'
+                args = Object.assign({region: 'localhost'}, config.aws || {}, {endpoint})
+                location = args.region
                 delete process.env.AWS_PROFILE
             } else {
                 args = config.aws
