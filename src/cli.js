@@ -80,7 +80,7 @@ Options:
   --aws-region                      # AWS service region
   --aws-secret-key                  # AWS secret key
   --bump [major,minor,patch]        # Version digit to bump in generation
-  --config migrate.js               # Migration configuration file
+  --config migrate.json             # Migration configuration file
   --crypto cipher:password          # Crypto to use for encrypted attributes
   --debug                           # Show debug trace
   --dir directory                   # Change to directory to execute
@@ -152,7 +152,7 @@ class CLI {
             onetable.senselogs = this.log
 
             this.migrate = new Migrate(onetable, {
-                migrations: config.migrations,
+                // migrations: config.migrations,
                 dir: config.dir,
                 profile: config.profile,
             })
@@ -200,7 +200,7 @@ class CLI {
         let versions = await this.migrate.getOutstandingVersions()
         let version = versions.length ? versions.pop() : await this.migrate.getCurrentVersion()
         version = Semver.inc(version, this.bump)
-        let dir = Path.resolve(this.config.onetable.migrations || '.')
+        let dir = Path.resolve(this.config.dir || '.')
         let path = `${dir}/${version}.js`
         if (Fs.existsSync(path)) {
             error(`Migration ${path} already exists`)
