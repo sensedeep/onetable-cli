@@ -31,8 +31,8 @@ import {Table} from 'dynamodb-onetable'
 import {Migrate} from 'onetable-migrate'
 
 //  DEV
-//  import {Table} from '../../onetable/dist/mjs/index.js'
-//  import {Migrate} from '../../onetable-migrate/dist/mjs/index.js'
+// import {Table} from '../../onetable/dist/mjs/index.js'
+// import {Migrate} from '../../onetable-migrate/dist/mjs/index.js'
 
 import Blend from 'js-blend'
 import Dates from 'js-dates'
