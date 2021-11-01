@@ -9,20 +9,19 @@
 
 The DynamoDB OneTable Migration CLI is a command line tool for orchestrating DynamoDB migrations when using [DynamoDB OneTable](https://www.npmjs.com/package/dynamodb-onetable) and [OneTable Migrate](https://www.npmjs.com/package/onetable-migrate).
 
-The CLI is ideal for development teams to initialize and reset database contents and for production use to control and sequence step-wise database upgrades.
+The CLI is ideal for development teams to initialize and reset database contents and for production use to control and sequence step-wise database upgrades and downgrades. It is a vital tool to successfully evolve your Single-Table DynamoDB patterns.
 
-The OneTable CLI was used in production by the [SenseDeep Serverless Troubleshooter](https://www.sensedeep.com/) for all DynamoDB access for a year before it was published as an NPM module.
+The OneTable CLI was used in production by the [SenseDeep Developer Studio](https://www.sensedeep.com/) for all DynamoDB access for a year before it was published as an NPM module.
 
 ## OneTable Migrate CLI Features
 
-* Simple command line utility to control and manage DynamoDB schema and contents.
-* Mutate database schema and contents via discrete, reversible migrations.
+* Easy command line utility to control and manage DynamoDB schema and contents.
+* Mutates database schema and contents via discrete, reversible migrations.
 * Migrate upwards, downwards, to specific versions.
 * Automated, ordered sequencing of migrations in both directions.
-* Operate on local databases, remote databases via AWS credentials and via Lambda proxy.
+* Operates on local databases, remote databases via AWS credentials and via a Lambda proxy.
 * Add and remove seed data in any migration.
 * Quick reset of DynamoDB databases for development.
-* Generate migration scripts.
 * Show database status and list applied migrations.
 * Show outstanding migrations.
 * Stored history of migrations.
@@ -36,9 +35,20 @@ NOTE: this package requires NPM version 7.0 or later. The version 6.x of NPM tha
 npm i onetable-cli -g
 ```
 
+## Remote and Local Operation
+
+OneTable migrations can be executed locally for simple tasks, however it is best to host your migrations close to the DynamoDB table for maximum performance. When executing locally, the migration scripts reside on your local computer and DynamoDB operations are performed from your system. When executing remotely, the migration scripts reside in your AWS account region and DynamoDB operations are performed there, in close proximity to the DynamoDB table.
+
+The OneTable CLI uses the [OneTable Migrate](https://www.npmjs.com/package/onetable-migrate) controller library internally to manage migrations and you should generally host migrations and execute in the same AWS region and availability zone as your DynamoDB table. This will accelerate migrations by minimizing the I/O transfer time.
+
+The easiest way to remotely host the OneTable Migrate library is by deploying the [OneTable Controller](https://github.com/sensedeep/onetable-controller) which is a complete solution for remotely hosting the migrate library.
+
+See [OneTable Controller](https://github.com/sensedeep/onetable-controller) and [OneTable Migrate](https://www.npmjs.com/package/onetable-migrate) for more details about Lambda hosting of the OneTable Migrate library.
+
+
 ## Getting Started
 
-To get started, create a directory for your migrations in your project.
+To get started using local migrations without the OneTable Controller, create a directory for your migrations in your project.
 
 ```sh
 mkdir ./migrations
@@ -236,11 +246,12 @@ Then define your AWS credentials as described above to grant access for the CLI 
 
 ### Remote Connections
 
-The OneTable CLI uses the [OneTable Migrate](https://www.npmjs.com/package/onetable-migrate) controller library internally to manage migrations. As such, DynamoDB I/O is performed from within the OneTable Migrate lambda. This means I/O travels to and from CLI command to the region hosting the OneTable Migrate lambda.
+The ideal configuration for the CLI is to host the OneTable Migrate library in the same AWS region and availability zone as your DynamoDB table. This will accelerate migrations by minimizing the I/O transfer time.
 
-If you have large databases or complex migrations, you should host the [OneTable Migrate](https://www.npmjs.com/package/onetable-migrate) library in the same AWS region and availablity zone as your DynamoDB instance. This will accelerate migrations by minimizing the I/O transfer time. With this split deployment of CLI and Migration library, higher volume migrations execute more quickly.
+To remotely host the OneTable Migrate library, deploy the [OneTable Controller](https://github.com/sensedeep/onetable-controller) to your desired AWS account and region.
 
-To configure remote control of migrations, set the migrate.json `arn` property to the ARN of your migration Lambda that hosts the Migration Library. See [OneTable Migrate](https://www.npmjs.com/package/onetable-migrate) for more details about Lambda hosting of the OneTable Migrate library.
+When deployed, configure migrations by setting the CLI migrate.json `arn` property to the ARN of your migration Lambda that hosts the Migration Library.
+
 
 ### Latest Migration
 
@@ -313,8 +324,9 @@ If the profile is set to 'dev', the dev profile properties of `dir`, `name`, and
 
 - [OneTable NPM](https://www.npmjs.com/package/dynamodb-onetable)
 - [OneTable GitHub](https://github.com/sensedeep/dynamodb-onetable)
-- [OneTable Post](https://www.sensedeep.com/blog/posts/2020/dynamodb-onetable.html)
+- [OneTable Controller](https://www.npmjs.com/package/onetable-controller)
 - [OneTable Migrate Library](https://www.npmjs.com/package/onetable-migrate)
+- [OneTable Post](https://www.sensedeep.com/blog/posts/2020/dynamodb-onetable.html)
 - [DocumentClient SDK Reference](https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/DynamoDB/DocumentClient.html)
 
 ### Participate
