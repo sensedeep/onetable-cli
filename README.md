@@ -89,60 +89,68 @@ export default {
     version: '0.0.1',
     description: 'Purpose of this migration',
     schema: Schema,
-    async up(db, migrate) {
-        // await db.create('Model', {})
+    async up(db, migrate, params) {
+        if (!params.dry) {
+            await db.create('Model', {})
+        } else {
+            console.log('Dry run: create "Model"')
+        }
     },
-    async down(db, migrate) {
-        // await db.remove('Model', {})
+    async down(db, migrate, params) {
+        if (!params.dry) {
+            await db.remove('Model', {})
+        } else {
+            console.log('Dry run: remove "Model"')
+        }
     }
 }
 ```
 
 ### Examples
 
-Apply the next migration
+Apply the next migration.
 
 ```sh
 onetable up
 ```
 
-Reverse the last migration
+Reverse the last migration.
 
 ```sh
 onetable down
 ```
 
-Repeat the last migration
+Repeat the last migration.
 
 ```sh
 onetable repeat
 ```
 
-Migrate to a specific version (up or down)
+Migrate to a specific version (up or down).
 
 ```sh
 onetable 0.1.3
 ```
 
-Apply all outstanding migrations
+Apply all outstanding migrations.
 
 ```sh
 onetable all
 ```
 
-Show the last applied migration
+Show the last applied migration.
 
 ```sh
 onetable status
 ```
 
-Show applied migrations
+Show applied migrations.
 
 ```sh
 onetable list
 ```
 
-Show outstanding migrations not yet applied
+Show outstanding migrations not yet applied.
 
 ```sh
 onetable outstanding
@@ -154,13 +162,14 @@ Reset the database to the latest migration. This should reset the database and a
 onetable reset
 ```
 
-Generate a specific version migration
+Generate a specific version migration.
 
 ```sh
 onetable --bump 2.4.3 generate
 ```
 
-Do a dry run for a migration and not execute
+Do a dry run for a migration and not execute. This will set params.dry to true when invoking the up/down.
+It is up to the up/down routines to implement the dry run functionality if that support is desired.
 
 ```sh
 onetable --dry up
@@ -268,13 +277,13 @@ export default {
     version: '0.0.1',
     description: 'Database reset to latest version',
     schema: Schema,
-    async up(db, migrate) {
+    async up(db, migrate, params) {
         if (migrate.params.profile == 'dev') {
             await removeAllItems(db)
         }
         //  Provision required database data
     },
-    async down(db, migrate) {
+    async down(db, migrate, params) {
         if (migrate.params.profile == 'dev') {
             await removeAllItems(db)
         }

@@ -27,12 +27,10 @@ import Readline from 'readline'
 import Semver from 'semver'
 import AWS from 'aws-sdk'
 
-import {Table} from 'dynamodb-onetable'
 import {Migrate} from 'onetable-migrate'
 
 //  DEV
-// import {Table} from '../../onetable/dist/mjs/index.js'
-// import {Migrate} from '../../onetable-migrate/dist/mjs/index.js'
+// import {Migrate} from '../../migrate/dist/mjs/index.js'
 
 import Blend from 'js-blend'
 import Dates from 'js-dates'
@@ -45,11 +43,15 @@ const MigrationTemplate = `
 export default {
     version: 'VERSION',
     description: 'Purpose of this migration',
-    async up(db, migrate) {
-        // await db.create('Model', {})
+    async up(db, migrate, params) {
+        if (!params.dry) {
+            // await db.create('Model', {})
+        }
     },
-    async down(db, migrate) {
-        // await db.remove('Model', {})
+    async down(db, migrate, params) {
+        if (!params.dry) {
+            // await db.remove('Model', {})
+        }
     }
 }`
 
@@ -84,7 +86,7 @@ Options:
   --crypto cipher:password          # Crypto to use for encrypted attributes
   --debug                           # Show debug trace
   --dir directory                   # Change to directory to execute
-  --dry                             # Dry-run, don't execute
+  --dry                             # Dry-run, pass params.dry to migrations.
   --endpoint http://host:port       # Database endpoint
   --force                           # Force action without confirmation
   --profile prod|qa|dev|...         # Select configuration profile
@@ -319,7 +321,7 @@ class CLI {
             await this.confirm(versions, direction)
             for (let version of versions) {
                 let verb = ['Downgrade from', 'Reset to', 'Upgrade to', 'Repeat'][direction + 1]
-                let migration = await this.migrate.apply(direction, version)
+                let migration = await this.migrate.apply(direction, version, {dry: this.dry})
                 print(`${verb} "${migration.version} - ${migration.description}"`)
             }
             current = await this.migrate.getCurrentVersion()
@@ -342,18 +344,12 @@ class CLI {
         if (this.config.profile == 'prod') {
             await this.rusure('WARNING: DANGEROUS: You are working on a production database! ')
         }
-        if (this.dry) {
-            print(`${this.dry} ${action} ${versions.length} ${noun} ${fromto} version ${target}.`)
-        } else {
-            print(`Confirm ${versions.length} "${action}" ${noun} ${fromto} version "${target}" for database "${this.config.onetable.name}" using profile "${this.config.profile}".`)
-        }
+        print(`Confirm ${versions.length} "${action}" ${noun} ${fromto} version "${target}" for database "${this.config.onetable.name}" using profile "${this.config.profile}".`)
         print(`\nMigrations to ${direction < 0 ? 'revert' : 'apply'}:`)
         for (let version of versions) {
             print(`${version}`)
         }
-        if (!this.dry) {
-            await this.rusure()
-        }
+        await this.rusure()
         print()
     }
 
@@ -497,8 +493,8 @@ class Proxy {
         this.lambda = new AWS.Lambda(aws)
     }
 
-    async apply(direction, version) {
-        return await this.invoke('apply', {direction, version})
+    async apply(direction, version, params = {}) {
+        return await this.invoke('apply', {direction, version, params})
     }
 
     async findPastMigrations() {
