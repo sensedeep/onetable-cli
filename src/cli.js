@@ -156,6 +156,7 @@ class CLI {
                 dir: config.dir,
                 profile: config.profile,
             })
+            await this.migrate.init()
         }
         try {
             await this.migrate.getCurrentVersion()
