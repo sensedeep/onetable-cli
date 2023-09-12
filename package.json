@@ -50,7 +50,7 @@
         "js-dates": "./src/paks/js-dates",
         "js-file": "./src/paks/js-file",
         "json5": "^2.2.3",
-        "onetable-migrate": "^1.1.7",
+        "onetable-migrate": "^1.2.0",
         "readline": "^1.3.0",
         "semver": "^7.5.4",
         "senselogs": "^1"
