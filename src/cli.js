@@ -4,19 +4,17 @@
 
     Usage:
     Migrations:
-        onetable [all, down, generate, list, outstanding, repeat, reset, status, up, N.N.N]
+        onetable [all, down, generate, list, named, outstanding, repeat, reset, status, up, N.N.N, NAMED]
 
     Reads migrate.json:
         crypto: {
             "cipher": "aes-256-gcm",
             "password": "1f2e2-eeeee-aa3a2-12345-3a716-fedca"
         },
-        delimiter: ':',
         dir: './migrations-directory',
-        hidden: false,
-        name: 'table-name',
-        nulls: false,
-        typeField: 'type',
+        onetable: {
+            name: 'table-name',
+        },
         aws: {accessKeyId, secretAccessKey, region},
         arn: 'lambda-arn'
  */
@@ -37,14 +35,16 @@ import Dates from 'js-dates'
 import File from 'js-file'
 import SenseLogs from 'senselogs'
 
-//  import SenseLogs from '../../senselogs/dist/mjs/index.js'
-
 const MigrationTemplate = `
+import Schema from 'your-onetable-schema'
+
 export default {
     version: 'VERSION',
+    schema: Schema,
     description: 'Purpose of this migration',
     async up(db, migrate, params) {
         if (!params.dry) {
+            // db.log.info('Running upgrade')
             // await db.create('Model', {})
         }
     },
@@ -54,13 +54,6 @@ export default {
         }
     }
 }`
-
-const Types = {
-    String: 'string',
-    Number: 'number',
-    Boolean: 'boolean',
-    String: 'string',
-}
 
 const Usage = `
 onetable usage:
@@ -72,12 +65,15 @@ Migrations:
   onetable generate         # Generate a stub migration file
   onetable list             # List all applied migrations
   onetable outstanding      # List migrations yet to be applied
+  onetable named            # List available named migrations
   onetable repeat           # Repeat the last migration
-  onetable reset            # Reset the database with latest migration
+  onetable reset            # Reset the database to the latest schema
   onetable status           # Show most recently applied migration
   onetable up               # Apply the next migration
+  onetable NAME             # Apply a named migration
 
 Options:
+  --arn                             # Lambda ARN for migration controller
   --aws-access-key                  # AWS access key
   --aws-region                      # AWS service region
   --aws-secret-key                  # AWS secret key
@@ -87,14 +83,13 @@ Options:
   --debug                           # Show debug trace
   --dir directory                   # Change to directory to execute
   --dry                             # Dry-run, pass params.dry to migrations.
-  --endpoint http://host:port       # Database endpoint
+  --endpoint http://host:port       # Database endpoint for local use.
   --force                           # Force action without confirmation
   --profile prod|qa|dev|...         # Select configuration profile
   --quiet                           # Run as quietly as possible
+  --table TableName                 # DynamoDB table name
   --version                         # Emit version number
 `
-
-const LATEST_VERSION = 'latest'
 
 class CLI {
     usage() {
@@ -106,6 +101,7 @@ class CLI {
         this.dry = ''
         this.bump = 'patch'
         this.aws = {}
+        this.table = null
     }
 
     async init() {
@@ -126,6 +122,10 @@ class CLI {
         let crypto = this.crypto || onetable.crypto || config.crypto
         if (crypto) {
             onetable.crypto = crypto.primary ? crypto : {primary: crypto}
+        }
+        onetable.name = this.table || onetable.name
+        if (!onetable.name) {
+            error('Missing DynamoDB table name')
         }
 
         let location
@@ -154,7 +154,7 @@ class CLI {
             onetable.senselogs = this.log
 
             this.migrate = new Migrate(onetable, {
-                // migrations: config.migrations,
+                migrations: config.migrations,
                 dir: config.dir,
                 profile: config.profile,
             })
@@ -180,17 +180,19 @@ class CLI {
 
         } else if (scope == 'migrate') {
             if (cmd == 'all') {
-                await this.move()
+                await this.run()
             } else if (cmd == 'reset') {
-                await this.move(LATEST_VERSION)
+                await this.run("reset")
             } else if (cmd == 'status') {
                 await this.status()
             } else if (cmd == 'list') {
                 await this.list()
             } else if (cmd == 'outstanding') {
                 await this.outstanding()
-            } else if (args.length) {
-                await this.move(cmd)
+            } else if (cmd == 'named') {
+                await this.named()
+            } else if (cmd) {
+                await this.run(cmd)
             } else {
                 this.usage()
             }
@@ -202,7 +204,15 @@ class CLI {
     async generateMigration() {
         let versions = await this.migrate.getOutstandingVersions()
         let version = versions.length ? versions.pop() : await this.migrate.getCurrentVersion()
-        version = Semver.inc(version, this.bump)
+        if (Semver.valid(this.bump)) {
+            version = this.bump
+        } else {
+            let newVersion = Semver.inc(version, this.bump)
+            if (!Semver.valid(newVersion)) {
+                this.error(`Cannot bump version ${version} via ${this.bump}`)
+            }
+            version = newVersion
+        }
         let dir = Path.resolve(this.config.dir || '.')
         let path = `${dir}/${version}.js`
         if (Fs.existsSync(path)) {
@@ -219,7 +229,7 @@ class CLI {
     }
 
     async list() {
-        let pastMigrations = await this.migrate.findPastMigrations()
+        let pastMigrations = await this.migrate.getPastMigrations()
         if (this.quiet) {
             for (let m of pastMigrations) {
                 print(m.version)
@@ -228,11 +238,11 @@ class CLI {
             if (pastMigrations.length == 0) {
                 print('No migrations applied')
             } else {
-                print('Date                  Version   Description')
+                print('Date                                Version   Description')
             }
             for (let m of pastMigrations) {
-                let date = Dates.format(m.time, 'HH:MM:ss mmm d, yyyy')
-                print(`${date}  ${m.version.padStart(7)}   ${m.description}`)
+                let date = Dates.format(m.date, 'HH:MM:ss mmm d, yyyy')
+                print(`${date}  ${m.version.padStart(20)}   ${m.description}`)
             }
         }
     }
@@ -248,11 +258,21 @@ class CLI {
         }
     }
 
+    async named() {
+        let list = await this.migrate.getNamedMigrations()
+        if (list.length == 0) {
+            print('none')
+        } else {
+            for (let migration of list) {
+                print(`${migration}`)
+            }
+        }
+    }
+
     /*
         Move to the target version
      */
-    async move(target) {
-        let direction
+    async run(target) {
         let outstanding = await this.migrate.getOutstandingVersions()
 
         if (!target) {
@@ -263,24 +283,26 @@ class CLI {
                 return
             }
         }
-        let pastMigrations = await this.migrate.findPastMigrations()
-        let current = pastMigrations.length ? pastMigrations[pastMigrations.length - 1].version : '0.0.0'
+        let pastMigrations = await this.migrate.getPastMigrations()
+        let pastVersions = pastMigrations.filter(m => Semver.valid(m.version))
+        let current = await this.migrate.getCurrentVersion()
         let versions = []
+        let cmd
 
-        if (target == 'latest') {
-            direction = 0
+        if (target == 'latest' || target == 'reset') {
+            cmd = 'reset'
             pastMigrations = []
-            versions = [LATEST_VERSION]
+            versions = ["reset"]
 
         } else if (target == 'repeat') {
-            direction = 2
+            cmd = 'repeat'
             let version = pastMigrations.reverse().slice(0).map(m => m.version).shift()
             if (version) {
                 versions = [version]
             }
 
         } else if (target == 'up') {
-            direction = 1
+            cmd = 'up'
             if (outstanding.length == 0) {
                 print(`All migrations applied`)
                 return
@@ -288,41 +310,52 @@ class CLI {
             versions = [outstanding.shift()]
 
         } else if (target == 'down') {
-            direction = -1
-            let version = pastMigrations.slice(0).reverse().map(m => m.version).shift()
+            cmd = 'down'
+            let version = pastVersions.slice(0).reverse().map(m => m.version).shift()
             if (version) {
                 versions = [version]
             }
 
-        } else if (Semver.compare(target, current) < 0) {
-            direction = -1
-            if (target != '0.0.0' && !pastMigrations.find(m => m.version == target)) {
-                error(`Cannot find target migration ${target} in applied migrations`)
-            }
-            versions = pastMigrations.reverse().map(m => m.version).filter(v => Semver.compare(v, target) > 0)
+        } else if (Semver.valid(target)) {
+            if (Semver.compare(target, current) < 0) {
+                cmd = 'down'
+                if (target != '0.0.0' && !pastVersions.find(p => p == target)) {
+                    error(`Cannot find target migration ${target} in applied migrations`)
+                }
+                versions = pastVersions.reverse().filter(v => Semver.compare(v, target) > 0)
 
+            } else {
+                cmd = 'up'
+                if (Semver.compare(target, current) <= 0) {
+                    print('Migration already applied')
+                    return
+                }
+                if (!outstanding.find(v => v == target)) {
+                    error(`Cannot find migration ${target} in outstanding migrations: ${outstanding.join(', ')}`)
+                }
+                versions = outstanding.filter(v => Semver.compare(v, current) >= 0)
+                versions = versions.filter(v => Semver.compare(v, target) <= 0)
+            }
         } else {
-            direction = 1
-            if (Semver.compare(target, current) <= 0) {
-                print('Migration already applied')
-                return
-            }
-            if (!outstanding.find(v => v == target)) {
-                error(`Cannot find migration ${target} in outstanding migrations: ${outstanding}`)
-            }
-            versions = outstanding.filter(v => Semver.compare(v, current) >= 0)
-            versions = versions.filter(v => Semver.compare(v, target) <= 0)
+            //  Named version
+            versions = [target]
+            cmd = target
         }
         if (versions.length == 0) {
             print(`Already at target version: ${current}`)
             return
         }
         try {
-            await this.confirm(versions, direction)
+            await this.confirm(cmd, versions)
             for (let version of versions) {
-                let verb = ['Downgrade from', 'Reset to', 'Upgrade to', 'Repeat'][direction + 1]
-                let migration = await this.migrate.apply(direction, version, {dry: this.dry})
-                print(`${verb} "${migration.version} - ${migration.description}"`)
+                let migration = await this.migrate.apply(cmd, version, {dry: this.dry})
+                let verb = {
+                    'down': 'Downgrade database from', 
+                    'reset': 'Reset database with', 
+                    'up': 'Upgrade database to', 
+                    'repeat': 'Repeat migration'
+                }[cmd] || 'Run named migration'
+                print(`${verb} "${version} - ${migration.description}"`)
             }
             current = await this.migrate.getCurrentVersion()
             print(`\nCurrent database version: ${current}`)
@@ -333,19 +366,19 @@ class CLI {
         }
     }
 
-    async confirm(versions, direction) {
+    async confirm(cmd, versions) {
         if (this.force) {
             return
         }
-        let action = ['downgrade', 'reset', 'upgrade', 'repeat'][direction + 1]
+        cmd = { 'up': 'upgrade', 'down': 'downgrade'}[cmd] || cmd
         let noun = versions.length > 1 ? 'changes' : 'change'
-        let fromto = action == 'downgrade' ? 'from' : 'to'
+        let fromto = cmd == 'downgrade' ? 'from' : 'to'
         let target = versions[versions.length - 1]
         if (this.config.profile == 'prod') {
             await this.rusure('WARNING: DANGEROUS: You are working on a production database! ')
         }
-        print(`Confirm ${versions.length} "${action}" ${noun} ${fromto} version "${target}" for database "${this.config.onetable.name}" using profile "${this.config.profile}".`)
-        print(`\nMigrations to ${direction < 0 ? 'revert' : 'apply'}:`)
+        print(`Confirm ${versions.length} "${cmd}" ${noun} ${fromto} version "${target}" for database "${this.config.onetable.name}" using profile "${this.config.profile}".`)
+        print(`\nMigrations to ${cmd == 'downgrade' ? 'revert' : 'apply'}:`)
         for (let version of versions) {
             print(`${version}`)
         }
@@ -377,7 +410,9 @@ class CLI {
         let i
         for (i = 2; i < argv.length; i++) {
             let arg = argv[i]
-            if (arg == '--aws-access-key') {
+            if (arg == '--arn') {
+                this.arn = argv[++i]
+            } else if (arg == '--aws-access-key') {
                 this.aws.accessKeyId = argv[++i]
             } else if (arg == '--aws-secret-key') {
                 this.aws.secretAccessKey = argv[++i]
@@ -406,11 +441,13 @@ class CLI {
                 this.profile = argv[++i]
             } else if (arg == '--quiet' || arg == '-q') {
                 this.quiet = true
+            } else if (arg == '--table') {
+                this.table = argv[++i]
             } else if (arg == '--verbose' || arg == '-v') {
                 this.verbosity = true
             } else if (arg == '--version') {
                 await this.printVersion()
-            } else if (arg[0] == '-' || arg.indexOf('-') >= 0) {
+            } else if (arg[0] == '-') {
                 this.usage()
             } else {
                 break
@@ -425,9 +462,13 @@ class CLI {
             Blend properties under profiles[profile]: to the top level. Supports profiles: dev, qa, prod,...
      */
     async getConfig() {
-        let migrateConfig = this.migrateConfig || 'migrate.json'
+        let migrateConfig = this.migrateConfig || 'migrate.json5'
         if (!Fs.existsSync(migrateConfig)) {
-            error(`Cannot locate ${migrateConfig}`)
+            //  LEGACY
+            migrateConfig = 'migrate.json'
+            if (!Fs.existsSync(migrateConfig)) {
+                error(`Cannot locate migrate.json5`)
+            }
         }
         let index, profile
         if ((index = process.argv.indexOf('--profile')) >= 0) {
@@ -493,12 +534,12 @@ class Proxy {
         this.lambda = new AWS.Lambda(aws)
     }
 
-    async apply(direction, version, params = {}) {
-        return await this.invoke('apply', {direction, version, params})
+    async apply(action, version, params = {}) {
+        return await this.invoke('apply', {action, version, params})
     }
 
-    async findPastMigrations() {
-        return await this.invoke('findPastMigrations')
+    async getPastMigrations() {
+        return await this.invoke('getPastMigrations')
     }
 
     async getCurrentVersion() {
@@ -509,12 +550,16 @@ class Proxy {
         return await this.invoke('getOutstandingVersions')
     }
 
-    async invoke(action, args) {
-        let params = {action, config: this.config}
+    async getNamedMigrations(limit = Number.MAX_SAFE_INTEGER) {
+        return await this.invoke('getNamedMigrations')
+    }
+
+    async invoke(cmd, args) {
+        let params = {cmd, config: this.config}
         if (args) {
             params.args = args
         }
-        this.debug(`Invoke migrate proxy`, {action, args, arn: this.arn})
+        this.debug(`Invoke migrate proxy`, {cmd, args, arn: this.arn})
 
         let payload = JSON.stringify(params, null, 2)
 
@@ -526,17 +571,17 @@ class Proxy {
         }).promise()
 
         if (result.StatusCode != 200) {
-            error(`Cannot invoke ${action}: bad status code ${result.StatusCode}`)
+            error(`Cannot invoke ${cmd}: bad status code ${result.StatusCode}`)
 
         } else if (result && result.Payload) {
             result = JSON.parse(result.Payload)
-            if (result.errorMessage) {
-                error(`Cannot invoke ${action}: ${result.errorMessage}`)
+            if (result.error) {
+                error(`Cannot invoke ${cmd}: ${result.error}`)
             } else {
                 result = result.body
             }
         } else {
-            error(`Cannot invoke ${action}: no result`)
+            error(`Cannot invoke ${cmd}: no result`)
         }
         this.debug(`Migrate proxy results`, {args, result})
         return result

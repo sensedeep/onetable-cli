@@ -9,7 +9,7 @@
 
 The DynamoDB OneTable Migration CLI is a command line tool for orchestrating DynamoDB migrations when using [DynamoDB OneTable](https://www.npmjs.com/package/dynamodb-onetable) and [OneTable Migrate](https://www.npmjs.com/package/onetable-migrate).
 
-The CLI is ideal for development teams to initialize and reset database contents and for production use to control and sequence step-wise database upgrades and downgrades. It is a vital tool to successfully evolve your Single-Table DynamoDB patterns.
+The CLI is ideal for development teams to initialize and reset database contents and for production use to control and sequence step-wise database upgrades, downgrades and maintenance tasks. It is a vital tool to successfully evolve your Single-Table DynamoDB patterns.
 
 The OneTable CLI was used in production by the [SenseDeep Developer Studio](https://www.sensedeep.com/) for all DynamoDB access for a year before it was published as an NPM module.
 
@@ -17,9 +17,11 @@ The OneTable CLI was used in production by the [SenseDeep Developer Studio](http
 
 * Easy command line utility to control and manage DynamoDB schema and contents.
 * Mutates database schema and contents via discrete, reversible migrations.
-* Migrate upwards, downwards, to specific versions.
+* Migrate upwards, downwards, and to specific versions.
 * Automated, ordered sequencing of migrations in both directions.
-* Operates on local databases, remote databases via AWS credentials and via a Lambda proxy.
+* Named migrations for database maintenance, auditing and other tasks.
+* Operates on local databases and remote databases.
+* Use AWS credentials or profiles.
 * Add and remove seed data in any migration.
 * Quick reset of DynamoDB databases for development.
 * Show database status and list applied migrations.
@@ -28,8 +30,6 @@ The OneTable CLI was used in production by the [SenseDeep Developer Studio](http
 * Minimal dependencies.
 
 ## Installation
-
-NOTE: this package requires NPM version 7.0 or later. The version 6.x of NPM that comes with Node v14 will not work as it does not support local packages.
 
 ```sh
 npm i onetable-cli -g
@@ -54,51 +54,51 @@ To get started using local migrations without the OneTable Controller, create a 
 mkdir ./migrations
 ```
 
-Then create a `migrate.json` with your DynamoDB OneTable configuration. We use JSON5 so you can use Javascript object literal syntax.
+Then create a `migrate.json5` with your DynamoDB OneTable configuration. We use JSON5 so you can use Javascript object literal syntax.
 
 ```javascript
 {
     onetable: {
         name: 'your-dynamo-table',
         //  Other onetable configuration parameters.
-    }
+        partial: true,
+    },
+    dir: './migrations'
 }
 ```
 
-Set the `name` property to the name of your DynamoDB table.
+Set the `name` property to the name of your DynamoDB table and set the `dir` property to point to the directory containing the migrations.
 
-If you need to have your migrations in a different directory, you can set the migrate.json `dir` property to point to the directory containing the migrations themselves.
+You pass your OneTable configuration via the `onetable` collection. Ensure your `crypto`, `nulls` and `typeField` settings match your deployed code. If you have these set to non-default settings in your code, add them to your migrate.json5 `onetable` map to match.
 
-You pass your OneTable configuration via the `onetable` collection. Ensure your `crypto`, `delimiter`, `nulls` and `typeField` settings match your deployed code. If you have these set to non-default settings in your code, add them to your migrate.json `onetable` map to match.
-
-Generate a stub migration
+**Generate a stub migration**
 
 Migrations are Javascript files that export the methods `up` and `down` to apply the migration and a `description` property. The migration must nominate a version and provide the OneTable schema that applies for the table data at this version level.
 
 ```sh
-cd ./migrations
 onetable generate migration
 ```
 
-This will create a `0.0.1.js` migration that contains the following. Edit the `up` and `down` methods and description to suit.
+This will create a `0.0.1.js` migration that contains an `up` method to upgrade the database and a `down` method to downgrade to the previous version. Customize the `up` and `down` methods and description to suit.
 
-The `db` property is the OneTable `Table` instance. This `migrate` property is an instance of the CLI Migrate class.
+For example:
 
 ```javascript
+import Schema from 'your-onetable-schema',
 export default {
     version: '0.0.1',
     description: 'Purpose of this migration',
     schema: Schema,
     async up(db, migrate, params) {
         if (!params.dry) {
-            await db.create('Model', {})
+            //  Code here to upgrade the database
         } else {
             console.log('Dry run: create "Model"')
         }
     },
     async down(db, migrate, params) {
         if (!params.dry) {
-            await db.remove('Model', {})
+            //  Code here to downgrade the database to the prior version
         } else {
             console.log('Dry run: remove "Model"')
         }
@@ -106,7 +106,9 @@ export default {
 }
 ```
 
-### Examples
+The `db` property is the OneTable `Table` instance. This `migrate` property is an instance of the CLI Migrate class.
+
+### OneTable Comamnds 
 
 Apply the next migration.
 
@@ -130,6 +132,13 @@ Migrate to a specific version (up or down).
 
 ```sh
 onetable 0.1.3
+```
+
+Run a specific named migration.
+
+```sh
+onetable cleanup-orphans
+onetable reset
 ```
 
 Apply all outstanding migrations.
@@ -156,7 +165,7 @@ Show outstanding migrations not yet applied.
 onetable outstanding
 ```
 
-Reset the database to the latest migration. This should reset the database and apply the `latest.js` migration. The purpose of the `latest` migration is to have one migration that can quickly create a new database with the latest schema without having to apply all historical migrations.
+Reset the database to the latest version. If you provide a `reset.js` migration, this migrations should reset the database to a known good state. The purpose of the `reset` migration is to have one migration that can quickly initialize a database with the latest data and schema without having to apply all historical migrations.
 
 ```sh
 onetable reset
@@ -166,10 +175,13 @@ Generate a specific version migration.
 
 ```sh
 onetable --bump 2.4.3 generate
+
+# or generate with a bumped minor version number
+
+onetable --bump minor generate
 ```
 
-Do a dry run for a migration and not execute. This will set params.dry to true when invoking the up/down.
-It is up to the up/down routines to implement the dry run functionality if that support is desired.
+Do a dry run for a migration and not execute. This will set params.dry to true when invoking the up/down migration function. It is up to the up/down routines to implement the dry run functionality if that support is desired.  During a dry run, the database migration table will not be updated nor will the current version and schema.
 
 ```sh
 onetable --dry up
@@ -181,8 +193,8 @@ onetable --dry up
 --aws-access-key                    # AWS access key
 --aws-region                        # AWS service region
 --aws-secret-key                    # AWS secret key
---bump [major,minor,patch]          # Version digit to bump in generation
---config ./migrate.json             # Migration configuration
+--bump [VERSION|major|minor|patch]  # Version to generate or digit to bump
+--config ./migrate.json5            # Migration configuration file
 --crypto cipher:password            # Crypto to use for encrypted attributes
 --dir directory                     # Change to directory to execute
 --dry                               # Dry-run, don't execute
@@ -190,26 +202,26 @@ onetable --dry up
 --force                             # Force action without confirmation
 --profile prod|qa|dev|...           # Select configuration profile
 --quiet                             # Run as quietly as possible
+--table TableName                   # Set the DynamoDB table name
 --version                           # Emit version number
 ```
 
-### Accessing AWS
+### Authenticating with DynamoDB
 
 You can configure access to your DynamoDB table in your AWS account several ways:
 
 * via command line options
-* via the migrate.json
+* via the migrate.json5
 * via environment variables
-* via proxy
 
 Via command line option:
 
-```
+```shell
 onetable --aws-access-key key --aws-secret-key secret --aws-region us-east-1
 ```
 
-Via migrate.json
-```
+Via migrate.json5:
+```javascript
 {
     aws: {
         accessKeyId: 'your-key',
@@ -221,21 +233,21 @@ Via migrate.json
 
 Or via environment variables:
 
-```
+```bash
 export AWS_ACCESS_KEY_ID=your-access-key
 export AWS_SECRET_ACCESS_KEY=your-secret-key
 export AWS_DEFAULT_REGION=us-east-1
 ```
 
 You can also use:
-```
+```bash
 export AWS_PROFILE=aws-profile-name
 export AWS_REGION=us-east-1
 ```
 
-To access a local DynamoDB database, set the migrate.json `aws.endpoint` property to point to the listening endpoint.
+To access a local DynamoDB database, set the migrate.json5 `aws.endpoint` property to point to the listening endpoint.
 
-```
+```javascript
 {
     aws: {
         endpoint: 'http://localhost:8000'
@@ -243,10 +255,9 @@ To access a local DynamoDB database, set the migrate.json `aws.endpoint` propert
 }
 ```
 
-To communicate with a Lambda hosting the [OneTable Migrate Library](), set the `arn` field to the ARN of your Lambda function.
-Then define your AWS credentials as described above to grant access for the CLI to your Lambda.
+To communicate with a Lambda hosting the [OneTable Migrate Library](), set the `arn` field to the ARN of your Lambda function. Then define your AWS credentials as described above to grant access for the CLI to your Lambda.
 
-```
+```javascript
 {
     arn: 'arn:aws:lambda:us-east-1:123456789012:function:migrate-prod-invoke'
 }
@@ -259,25 +270,27 @@ The ideal configuration for the CLI is to host the OneTable Migrate library in t
 
 To remotely host the OneTable Migrate library, deploy the [OneTable Controller](https://github.com/sensedeep/onetable-controller) to your desired AWS account and region.
 
-When deployed, configure migrations by setting the CLI migrate.json `arn` property to the ARN of your migration Lambda that hosts the Migration Library.
+When deployed, configure migrations by setting the CLI migrate.json5 `arn` property to the ARN of your migration Lambda that hosts the Migration Library.
 
 
-### Latest Migration
+### Reset Migration
 
-You can create a special `latest` migration that is used for the `migrate reset` command which is is a quick way to get a development database up to the current version.
+You can create a special named `reset` migration that is used for the `onetable reset` command which is is a quick way to get a development database up to the current version.
 
-The latest migration should remove all data from the database and then initialize the database equivalent to applying all migrations.
+The `reset` migration should remove all data from the database and then initialize the database as required.
 
-When creating your `latest.js` migration, be very careful when removing all items from the database. We typically protect this with a test against the deployment profile to ensure you never do this on a production database.
+When creating your `reset.js` migration, be very careful when removing all items from the database. We typically protect this with a test against the deployment profile to ensure you never do this on a production database.
 
-Sample latest.js migration:
+Sample reset.js migration:
 
 ```javascript
+import Schema from 'your-onetable-schema.js'
 export default {
     version: '0.0.1',
-    description: 'Database reset to latest version',
+    description: 'Database reset',
     schema: Schema,
     async up(db, migrate, params) {
+        //  Careful not to remove all items on a production database!
         if (migrate.params.profile == 'dev') {
             await removeAllItems(db)
         }
@@ -289,6 +302,7 @@ export default {
         }
     },
 }
+
 async function removeAllItems(db) {
     do {
         items = await db.scanItems({}, {limit: 100})
@@ -301,26 +315,27 @@ async function removeAllItems(db) {
 
 ### Profiles
 
-You can use profiles in your `migrate.json` to have specific configuration for different build profiles.
+You can use profiles in your `migrate.json5` to have specific configuration for different build profiles.
 
 Profiles are implemented by copying the properties from the relevant `profile.NAME` collection to the top level. For example:
 
-Here is a sample migrate.json with profiles:
+Here is a sample migrate.json5 with profiles:
 
 ```javascript
 {
+    onetable: {
+        name: 'sensedb',
+        partial: true,
+    },
     profiles: {
         dev: {
             dir: './migrations',
-            name: 'sensedb',
             endpoint: 'http://localhost:8000'
         },
         qa: {
-            name: 'sensedb',
             arn: 'arn:aws:lambda:us-east-1:xxxx:function:migrate-qa-invoke'
         },
         prod: {
-            name: 'sensedb',
             arn: 'arn:aws:lambda:us-east-1:xxxx:function:migrate-prod-invoke'
         }
     }
