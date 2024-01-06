@@ -1,11 +1,13 @@
-![OneTable](https://www.sensedeep.com/images/ring-short.png?renew)
+![OneTable](https://www.sensedeep.com/images/ring-short.png)
 
 *One Table to Rule Them All*
 
 # OneTable Migrate CLI
 
+<!--
 [![npm](https://img.shields.io/npm/v/onetable-cli.svg)](https://www.npmjs.com/package/onetable-cli)
 [![npm](https://img.shields.io/npm/l/onetable-cli.svg)](https://www.npmjs.com/package/onetable-cli)
+-->
 
 The DynamoDB OneTable Migration CLI is a command line tool for orchestrating DynamoDB migrations when using [DynamoDB OneTable](https://www.npmjs.com/package/dynamodb-onetable) and [OneTable Migrate](https://www.npmjs.com/package/onetable-migrate).
 
