@@ -86,6 +86,7 @@ Options:
   --endpoint http://host:port       # Database endpoint for local use.
   --force                           # Force action without confirmation
   --profile prod|qa|dev|...         # Select configuration profile
+  --retry-failed                    # Retry recent failed migrations
   --quiet                           # Run as quietly as possible
   --table TableName                 # DynamoDB table name
   --version                         # Emit version number
@@ -102,6 +103,7 @@ class CLI {
         this.bump = 'patch'
         this.aws = {}
         this.table = null
+        this.retryFailed = false
     }
 
     async init() {
@@ -289,6 +291,15 @@ class CLI {
         let versions = []
         let cmd
 
+        let failedMigrations = []
+        for (let migration of pastMigrations.reverse()) {
+            if (migration.status != 'success') {
+                failedMigrations.push(migration)
+            } else {
+                break
+            }
+        }
+
         if (target == 'latest' || target == 'reset') {
             cmd = 'reset'
             pastMigrations = []
@@ -296,18 +307,23 @@ class CLI {
 
         } else if (target == 'repeat') {
             cmd = 'repeat'
-            let version = pastMigrations.reverse().slice(0).map(m => m.version).shift()
+            let version = pastMigrations.map(m => m.version)[0]
             if (version) {
                 versions = [version]
             }
 
         } else if (target == 'up') {
             cmd = 'up'
-            if (outstanding.length == 0) {
+            if (this.retryFailed && failedMigrations.length) {
+                versions = failedMigrations.map(m => m.version).reverse()
+            } 
+            if (outstanding.length) {
+                versions.push(outstanding.shift())
+            }
+            if (versions.length == 0) {
                 print(`All migrations applied`)
                 return
             }
-            versions = [outstanding.shift()]
 
         } else if (target == 'down') {
             cmd = 'down'
@@ -348,14 +364,15 @@ class CLI {
         try {
             await this.confirm(cmd, versions)
             for (let version of versions) {
-                let migration = await this.migrate.apply(cmd, version, {dry: this.dry})
+                let action = failedMigrations.find(m => m.version == version) ? 'repeat' : cmd
+                let migration = await this.migrate.apply(action, version, {dry: this.dry})
                 let verb = {
                     'down': 'Downgrade database from', 
                     'reset': 'Reset database with', 
                     'up': 'Upgrade database to', 
                     'repeat': 'Repeat migration'
-                }[cmd] || 'Run named migration'
-                print(`${verb} "${version} - ${migration.description}"`)
+                }[action] || 'Run named migration'
+                print(`${verb} "${version} - ${migration?.description}"`)
             }
             current = await this.migrate.getCurrentVersion()
             print(`\nCurrent database version: ${current}`)
@@ -441,6 +458,8 @@ class CLI {
                 this.profile = argv[++i]
             } else if (arg == '--quiet' || arg == '-q') {
                 this.quiet = true
+            } else if (arg == '--retry-failed' || arg == '-r') {
+                this.retryFailed = true
             } else if (arg == '--table') {
                 this.table = argv[++i]
             } else if (arg == '--verbose' || arg == '-v') {
