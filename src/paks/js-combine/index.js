@@ -11,7 +11,7 @@
         '' Default is to blend objects and assign arrays
  */
 
-import clone from 'js-clone'
+import clone from '../js-clone/index.js'
 
 const RECURSE_LIMIT = 75
 

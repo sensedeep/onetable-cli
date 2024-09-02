@@ -2,7 +2,7 @@
     js-blend - Blend objects
  */
 
-import combine from 'js-combine'
+import combine from '../js-combine/index.js'
 
 export default function blend(dest, ...src) {
     if (!dest) {

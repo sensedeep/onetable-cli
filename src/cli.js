@@ -30,9 +30,9 @@ import {Migrate} from 'onetable-migrate'
 //  DEV
 // import {Migrate} from '../../migrate/dist/mjs/index.js'
 
-import Blend from 'js-blend'
-import Dates from 'js-dates'
-import File from 'js-file'
+import Blend from './paks/js-blend/index.js'
+import Dates from './paks/js-dates/index.js'
+import File from './paks/js-file/index.js'
 import SenseLogs from 'senselogs'
 
 const MigrationTemplate = `
