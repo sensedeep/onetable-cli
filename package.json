@@ -1,6 +1,6 @@
 {
     "name": "onetable-cli",
-    "version": "1.3.3",
+    "version": "1.3.5",
     "type": "module",
     "description": "DynamoDB OneTable CLI",
     "keywords": [
@@ -50,6 +50,7 @@
         "senselogs": "^1"
     },
     "files": [
-        "src/"
+        "src/",
+        "dist/"
     ]
 }
