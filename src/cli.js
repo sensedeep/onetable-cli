@@ -335,7 +335,7 @@ class CLI {
         } else if (Semver.valid(target)) {
             if (Semver.compare(target, current) < 0) {
                 cmd = 'down'
-                if (target != '0.0.0' && !pastVersions.find(p => p == target)) {
+                if (target != '0.0.0' && pastVersions.find(p => p == target).length == 0) {
                     error(`Cannot find target migration ${target} in applied migrations`)
                 }
                 versions = pastVersions.reverse().filter(v => Semver.compare(v, target) > 0)
@@ -476,7 +476,7 @@ class CLI {
     }
 
     /*
-        Ready json config files and blend contents. Strategy is:
+        Read json config files and blend contents. Strategy is:
             config = migrate.json | migrate.json:config files
             Blend properties under profiles[profile]: to the top level. Supports profiles: dev, qa, prod,...
      */
@@ -519,6 +519,9 @@ class CLI {
         }
         if (profile) {
             cfg.profile = profile
+        }
+        if (this.arn) {
+            cfg.arn = this.arn
         }
         this.profile = cfg.profile
         cfg.aws = cfg.aws || this.aws || {}
