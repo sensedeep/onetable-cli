@@ -335,10 +335,10 @@ class CLI {
         } else if (Semver.valid(target)) {
             if (Semver.compare(target, current) < 0) {
                 cmd = 'down'
-                if (target != '0.0.0' && pastVersions.find(p => p == target).length == 0) {
+                if (target != '0.0.0' && pastVersions.find(p => p.version == target).length == 0) {
                     error(`Cannot find target migration ${target} in applied migrations`)
                 }
-                versions = pastVersions.reverse().filter(v => Semver.compare(v, target) > 0)
+                versions = pastVersions.reverse().filter(v => Semver.compare(v.version, target) > 0)
 
             } else {
                 cmd = 'up'
